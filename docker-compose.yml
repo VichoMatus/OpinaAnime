@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: opina-anime-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: opina
+      POSTGRES_PASSWORD: opina
+      POSTGRES_DB: opinanime
+    ports:
+      - "5432:5432"
+    volumes:
+      - opina_anime_data:/var/lib/postgresql/data
+
+volumes:
+  opina_anime_data:

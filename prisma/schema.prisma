@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum AnimeStatus {
+  PENDING
+  WATCHING
+  COMPLETED
+  DROPPED
+}
+
+enum Tier {
+  S
+  A
+  B
+  C
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String?
+  email        String          @unique
+  passwordHash String
+  role         Role            @default(USER)
+  createdAt    DateTime        @default(now())
+  recommendations Recommendation[]
+  comments     Comment[]
+}
+
+model Recommendation {
+  id          String       @id @default(cuid())
+  title       String
+  imageUrl    String
+  rationale   String
+  tier        Tier?
+  status      AnimeStatus  @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+  @@index([status])
+  @@index([tier])
+}
+
+model Comment {
+  id             String         @id @default(cuid())
+  body           String
+  createdAt      DateTime       @default(now())
+  authorId       String
+  recommendationId String
+  author         User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  @@index([recommendationId, createdAt])
+}
