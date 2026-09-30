@@ -34,9 +34,28 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      // 1. Si es una ruta relativa (ej. /login), retornar directamente la ruta relativa.
+      // Así el navegador jamás saldrá del dominio en el que se encuentra.
+      if (url.startsWith("/")) {
+        return url;
+      }
+
+      // 2. Si la URL apunta a localhost pero estamos en producción (Vercel), bloquearla y enviar a /login relativo
+      if (url.includes("localhost") && process.env.NODE_ENV === "production") {
+        return "/login";
+      }
+
+      try {
+        const parsedUrl = new URL(url);
+        // Permitir si pertenece al mismo origen o a cualquier subdominio de vercel.app
+        if (parsedUrl.origin === baseUrl || parsedUrl.hostname.endsWith(".vercel.app")) {
+          return url;
+        }
+      } catch {
+        // En caso de url inválida
+      }
+
+      return "/login";
     },
   },
   pages: {
