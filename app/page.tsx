@@ -6,16 +6,23 @@ import Dashboard, { ForumRecommendation, UserSession } from "@/components/dashbo
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.id) redirect("/login");
 
   const rawRecommendations = await prisma.recommendation.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { votes: { _count: "desc" } },
+      { createdAt: "desc" },
+    ],
     include: {
       author: {
         select: { id: true, name: true, email: true, role: true },
       },
       _count: {
-        select: { comments: true },
+        select: { comments: true, votes: true },
+      },
+      votes: {
+        where: { userId: session.user.id },
+        select: { id: true },
       },
     },
   });
@@ -37,12 +44,14 @@ export default async function Home() {
       email: item.author.email,
     },
     commentsCount: item._count.comments,
+    votesCount: item._count.votes,
+    hasVoted: item.votes.length > 0,
   }));
 
   const currentUser: UserSession = {
     id: session.user.id,
-    name: session.user.name,
-    email: session.user.email,
+    name: session.user.name ?? null,
+    email: session.user.email ?? null,
     role: (session.user.role as "ADMIN" | "USER") || "USER",
   };
 

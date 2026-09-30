@@ -36,6 +36,7 @@ model User {
   createdAt       DateTime         @default(now())
   recommendations Recommendation[]
   comments        Comment[]
+  votes           Vote[]
 }
 
 model Recommendation {
@@ -52,6 +53,7 @@ model Recommendation {
   authorId    String
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments    Comment[]
+  votes       Vote[]
 
   @@index([status])
   @@index([tier])
@@ -67,4 +69,16 @@ model Comment {
   recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
   @@index([recommendationId, createdAt])
+}
+
+model Vote {
+  id               String         @id @default(cuid())
+  createdAt        DateTime       @default(now())
+  userId           String
+  recommendationId String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recommendationId])
+  @@index([recommendationId])
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import AnimeSearch, { JikanAnime } from "@/components/anime-search";
-import { MessageSquareIcon, TrashIcon, StarIcon } from "@/components/icons";
+import { MessageSquareIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
 
@@ -32,6 +32,8 @@ export interface ForumRecommendation {
     email: string;
   };
   commentsCount: number;
+  votesCount: number;
+  hasVoted: boolean;
 }
 
 interface DashboardProps {
@@ -116,12 +118,61 @@ export default function Dashboard({
     setFormError("");
   }
 
-  // Publicar nueva recomendación en el foro
   async function handleSignOut() {
     await signOut({ redirect: false });
     window.location.href = "/login";
   }
 
+  // Toggle de voto (Like / Upvote) con actualización optimista
+  async function handleToggleVote(id: string) {
+    const target = items.find((it) => it.id === id);
+    if (!target) return;
+
+    const prevHasVoted = target.hasVoted;
+    const prevVotesCount = target.votesCount;
+
+    const newHasVoted = !prevHasVoted;
+    const newVotesCount = newHasVoted ? prevVotesCount + 1 : Math.max(0, prevVotesCount - 1);
+
+    // 1. Actualización optimista local
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id ? { ...it, hasVoted: newHasVoted, votesCount: newVotesCount } : it
+      )
+    );
+
+    // 2. Llamada a la API
+    try {
+      const res = await fetch(`/api/recommendations/${id}/vote`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setItems((prev) =>
+          prev.map((it) =>
+            it.id === id ? { ...it, hasVoted: data.hasVoted, votesCount: data.votesCount } : it
+          )
+        );
+      } else {
+        // Revertir si hay error
+        setItems((prev) =>
+          prev.map((it) =>
+            it.id === id ? { ...it, hasVoted: prevHasVoted, votesCount: prevVotesCount } : it
+          )
+        );
+      }
+    } catch {
+      // Revertir si falla la red
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === id ? { ...it, hasVoted: prevHasVoted, votesCount: prevVotesCount } : it
+        )
+      );
+    }
+  }
+
+  // Publicar nueva recomendación en el foro
   async function handleCreateRecommendation(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedAnime || !rationale.trim() || submitting) return;
@@ -167,6 +218,8 @@ export default function Dashboard({
           email: user.email ?? "",
         },
         commentsCount: 0,
+        votesCount: 0,
+        hasVoted: false,
       };
 
       setItems([newItem, ...items]);
@@ -406,6 +459,21 @@ export default function Dashboard({
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 font-sans text-xs">
+                              {/* Botón de Like / Upvote interactivo */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleVote(item.id)}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold border transition-all duration-150 cursor-pointer ${
+                                  item.hasVoted
+                                    ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25"
+                                    : "bg-zinc-950/70 border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500"
+                                }`}
+                                title={item.hasVoted ? "Quitar me gusta" : "Apoyar esta recomendación"}
+                              >
+                                <ThumbsUpIcon className="w-3.5 h-3.5" filled={item.hasVoted} />
+                                <span>{item.votesCount}</span>
+                              </button>
+
                               <span
                                 className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
                                   item.tier
@@ -448,18 +516,34 @@ export default function Dashboard({
                           </p>
                         </div>
 
-                        {/* Pie de la tarjeta de Foro: Comentarios & Enlace al Hilo */}
+                        {/* Pie de la tarjeta de Foro: Upvotes & Comentarios & Enlace al Hilo */}
                         <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between font-sans text-xs text-zinc-400">
-                          <Link
-                            href={`/anime/${item.id}`}
-                            className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors"
-                          >
-                            <MessageSquareIcon className="w-4 h-4 text-indigo-400" />
-                            <span>
-                              {item.commentsCount}{" "}
-                              {item.commentsCount === 1 ? "comentario" : "comentarios en debate"}
-                            </span>
-                          </Link>
+                          <div className="flex items-center gap-4">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleVote(item.id)}
+                              className={`inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                                item.hasVoted ? "text-indigo-400 font-semibold" : "hover:text-zinc-200"
+                              }`}
+                              title={item.hasVoted ? "Quitar me gusta" : "Apoyar esta recomendación"}
+                            >
+                              <ThumbsUpIcon className="w-4 h-4" filled={item.hasVoted} />
+                              <span>
+                                {item.votesCount} {item.votesCount === 1 ? "voto" : "votos"}
+                              </span>
+                            </button>
+
+                            <Link
+                              href={`/anime/${item.id}`}
+                              className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors"
+                            >
+                              <MessageSquareIcon className="w-4 h-4 text-indigo-400" />
+                              <span>
+                                {item.commentsCount}{" "}
+                                {item.commentsCount === 1 ? "comentario" : "comentarios en debate"}
+                              </span>
+                            </Link>
+                          </div>
 
                           <Link
                             href={`/anime/${item.id}`}

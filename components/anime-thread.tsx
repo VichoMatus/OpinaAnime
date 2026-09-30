@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, ExternalLinkIcon, TrashIcon, StarIcon } from "@/components/icons";
+import { ArrowLeftIcon, ExternalLinkIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
 
@@ -46,6 +46,8 @@ export interface RecommendationDetail {
     role: Role;
   };
   comments: CommentItem[];
+  votesCount: number;
+  hasVoted: boolean;
 }
 
 interface AnimeThreadProps {
@@ -112,13 +114,57 @@ export default function AnimeThread({
   const isAdmin = currentUser.role === "ADMIN";
   const isAuthor = item.authorId === currentUser.id;
 
-  // Regla de moderación para borrar la recomendación:
-  // Admin puede siempre. Autor puede solo si nadie ha comentado todavía.
   const canDeleteRecommendation = isAdmin || (isAuthor && comments.length === 0);
 
   async function handleSignOut() {
     await signOut({ redirect: false });
     window.location.href = "/login";
+  }
+
+  // Toggle de voto (Like / Upvote) con actualización optimista
+  async function handleToggleVote() {
+    const prevHasVoted = item.hasVoted;
+    const prevVotesCount = item.votesCount;
+
+    const newHasVoted = !prevHasVoted;
+    const newVotesCount = newHasVoted ? prevVotesCount + 1 : Math.max(0, prevVotesCount - 1);
+
+    // 1. Actualización optimista local
+    setItem((prev) => ({
+      ...prev,
+      hasVoted: newHasVoted,
+      votesCount: newVotesCount,
+    }));
+
+    // 2. Llamada a la API
+    try {
+      const res = await fetch(`/api/recommendations/${item.id}/vote`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setItem((prev) => ({
+          ...prev,
+          hasVoted: data.hasVoted,
+          votesCount: data.votesCount,
+        }));
+      } else {
+        // Revertir si hay error en la respuesta
+        setItem((prev) => ({
+          ...prev,
+          hasVoted: prevHasVoted,
+          votesCount: prevVotesCount,
+        }));
+      }
+    } catch {
+      // Revertir si falla la red
+      setItem((prev) => ({
+        ...prev,
+        hasVoted: prevHasVoted,
+        votesCount: prevVotesCount,
+      }));
+    }
   }
 
   // Guardar cambios de Administración (Tier, Estado, AdminReview)
@@ -264,7 +310,7 @@ export default function AnimeThread({
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-8">
-        {/* Aviso de anime existente (si fue redirigido por búsqueda duplicada) */}
+        {/* Aviso de anime existente */}
         {notice === "already_exists" && (
           <div className="mb-6 rounded-lg bg-indigo-950/60 border border-indigo-500/60 p-4 text-indigo-200 text-sm font-sans flex items-center justify-between">
             <div>
@@ -307,7 +353,7 @@ export default function AnimeThread({
             {/* Información y Fundamento */}
             <div className="flex flex-col justify-between">
               <div>
-                {/* Cabecera: Título, Autor y Badges */}
+                {/* Cabecera: Título, Autor, Voto y Badges */}
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-800 pb-5">
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-serif text-zinc-100">{item.title}</h1>
@@ -321,15 +367,30 @@ export default function AnimeThread({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 font-sans text-xs">
+                    {/* Botón de Like / Upvote interactivo */}
+                    <button
+                      type="button"
+                      onClick={handleToggleVote}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold border transition-all duration-150 cursor-pointer ${
+                        item.hasVoted
+                          ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25"
+                          : "bg-zinc-950/70 border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500"
+                      }`}
+                      title={item.hasVoted ? "Quitar me gusta" : "Apoyar esta recomendación"}
+                    >
+                      <ThumbsUpIcon className="w-4 h-4" filled={item.hasVoted} />
+                      <span>{item.votesCount}</span>
+                    </button>
+
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-md font-semibold border ${getTierBadgeClass(
+                      className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold border ${getTierBadgeClass(
                         item.tier
                       )}`}
                     >
                       {item.tier ? `Tier ${item.tier}` : "Sin tier"}
                     </span>
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-md font-semibold border ${getStatusBadgeClass(
+                      className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold border ${getStatusBadgeClass(
                         item.status
                       )}`}
                     >
@@ -341,7 +402,7 @@ export default function AnimeThread({
                       <button
                         onClick={handleDeleteRecommendation}
                         title="Eliminar recomendación"
-                        className="ml-2 p-1.5 rounded-md border border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-rose-400 hover:border-rose-600 transition-colors cursor-pointer"
+                        className="ml-1 p-1.5 rounded-md border border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-rose-400 hover:border-rose-600 transition-colors cursor-pointer"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>

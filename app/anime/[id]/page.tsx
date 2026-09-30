@@ -35,6 +35,13 @@ export default async function AnimePage(props: AnimePageProps) {
           },
         },
       },
+      _count: {
+        select: { comments: true, votes: true },
+      },
+      votes: {
+        where: { userId: session.user.id },
+        select: { id: true },
+      },
     },
   });
 
@@ -71,6 +78,8 @@ export default async function AnimePage(props: AnimePageProps) {
         role: c.author.role as "ADMIN" | "USER",
       },
     })),
+    votesCount: rec._count.votes,
+    hasVoted: rec.votes.length > 0,
   };
 
   return (
