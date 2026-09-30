@@ -57,15 +57,13 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
 
       try {
         const res = await fetch(
-          `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(trimmed)}&limit=5`,
+          `/api/anime/search?q=${encodeURIComponent(trimmed)}`,
           { signal: abortControllerRef.current.signal }
         );
 
         if (!res.ok) {
-          if (res.status === 429) {
-            throw new Error("Límite de peticiones de MyAnimeList excedido. Espera unos segundos.");
-          }
-          throw new Error("Error al consultar MyAnimeList (Jikan API).");
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Error al buscar el anime.");
         }
 
         const data = await res.json();
@@ -73,13 +71,13 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         setSearchError(
-          err instanceof Error ? err.message : "No se pudo conectar con MyAnimeList."
+          err instanceof Error ? err.message : "No se pudo conectar con el servicio de anime."
         );
         setResults([]);
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 380);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
