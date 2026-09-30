@@ -15,9 +15,6 @@ export async function GET() {
   }
 
   try {
-    const limitPerPage = 20;
-    const targetCount = 200; // Traer los top 200 animes iniciales
-    const totalPages = Math.ceil(targetCount / limitPerPage);
     const catalogEntries: {
       externalId: string;
       title: string;
@@ -27,63 +24,51 @@ export async function GET() {
       year: number | null;
     }[] = [];
 
-    for (let page = 0; page < totalPages; page++) {
-      const offset = page * limitPerPage;
-      const url = `https://kitsu.io/api/edge/anime?sort=-userCount&page[limit]=${limitPerPage}&page[offset]=${offset}`;
-
-      const res = await fetch(url, {
-        headers: {
-          Accept: "application/vnd.api+json",
-          "Content-Type": "application/vnd.api+json",
-        },
-      });
-
-      if (!res.ok) {
-        console.error(`Error al consultar Kitsu en offset ${offset}: ${res.statusText}`);
-        break;
-      }
-
-      const json = await res.json();
-      const data = json.data || [];
-      if (data.length === 0) break;
-
-      for (const item of data) {
-        const attrs = item.attributes || {};
-        const title =
-          attrs.canonicalTitle ||
-          attrs.titles?.en_jp ||
-          attrs.titles?.en ||
-          "Sin título";
-        const titleEn = attrs.titles?.en || attrs.titles?.en_us || null;
-        const imageUrl =
-          attrs.posterImage?.large ||
-          attrs.posterImage?.original ||
-          attrs.posterImage?.medium ||
-          "";
-        const year = attrs.startDate ? new Date(attrs.startDate).getFullYear() : null;
-        const type = attrs.subtype || attrs.showType || "TV";
-
-        if (title && imageUrl) {
-          catalogEntries.push({
-            externalId: String(item.id),
-            title: String(title).trim(),
-            titleEn: titleEn ? String(titleEn).trim() : null,
-            imageUrl: String(imageUrl).trim(),
-            type: type ? String(type).toUpperCase() : "TV",
-            year: year && !isNaN(year) ? year : null,
-          });
+    // 1. Obtener páginas de AniList (GraphQL)
+    const anilistQuery = `
+      query ($page: Int) {
+        Page(page: $page, perPage: 50) {
+          media(type: ANIME, sort: [POPULARITY_DESC]) {
+            id
+            idMal
+            title { romaji english }
+            coverImage { large extraLarge }
+            seasonYear
+            format
+          }
         }
       }
+    `;
+
+    for (let page = 1; page <= 10; page++) {
+      try {
+        const res = await fetch("https://graphql.anilist.co", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: anilistQuery, variables: { page } }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const media = json?.data?.Page?.media || [];
+          for (const m of media) {
+            if (m && (m.title?.english || m.title?.romaji) && (m.coverImage?.large || m.coverImage?.extraLarge)) {
+              catalogEntries.push({
+                externalId: String(m.idMal || `al-${m.id}`),
+                title: (m.title?.english || m.title?.romaji).trim(),
+                titleEn: m.title?.english ? m.title.english.trim() : null,
+                imageUrl: (m.coverImage?.large || m.coverImage?.extraLarge).trim(),
+                type: m.format ? String(m.format).toUpperCase() : "TV",
+                year: m.seasonYear || null,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        break;
+      }
     }
 
-    if (catalogEntries.length === 0) {
-      return NextResponse.json(
-        { error: "No se pudieron obtener animes de Kitsu en este momento." },
-        { status: 502 }
-      );
-    }
-
-    // Inserción masiva en AnimeCatalog omitiendo duplicados
+    // Inserción masiva omitiendo duplicados
     const insertResult = await prisma.animeCatalog.createMany({
       data: catalogEntries,
       skipDuplicates: true,
@@ -96,7 +81,7 @@ export async function GET() {
       synced: catalogEntries.length,
       newlyInserted: insertResult.count,
       totalInCatalog,
-      message: `Catálogo sincronizado exitosamente con Kitsu (${insertResult.count} agregados, ${totalInCatalog} totales en base de datos).`,
+      message: `Catálogo sincronizado exitosamente (${insertResult.count} nuevos agregados, ${totalInCatalog} animes en total).`,
     });
   } catch (error: unknown) {
     console.error("Error en sync-catalog:", error);
