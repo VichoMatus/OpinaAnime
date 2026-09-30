@@ -119,6 +119,33 @@ export default function AnimeThread({
     window.location.href = "/login";
   }
 
+  // Actualización rápida directa de Tier o Estado
+  async function handleQuickUpdate(updates: { tier?: "S" | "A" | "B" | "C" | null; status?: string }) {
+    const prevTier = item.tier;
+    const prevStatus = item.status;
+
+    setItem((prev) => ({ ...prev, ...updates }));
+    if (updates.tier !== undefined) setAdminTier(updates.tier ?? "");
+    if (updates.status !== undefined) setAdminStatus(updates.status);
+
+    try {
+      const res = await fetch(`/api/recommendations/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(errorData.error || "No se pudo actualizar.");
+        setItem((prev) => ({ ...prev, tier: prevTier, status: prevStatus }));
+      }
+    } catch {
+      alert("Error de red al actualizar.");
+      setItem((prev) => ({ ...prev, tier: prevTier, status: prevStatus }));
+    }
+  }
+
   async function handleToggleVote() {
     const prevHasVoted = item.hasVoted;
     const prevVotesCount = item.votesCount;
@@ -172,7 +199,7 @@ export default function AnimeThread({
         body: JSON.stringify({
           tier: adminTier || null,
           status: adminStatus,
-          adminReview: adminStatus === "COMPLETED" ? adminReviewText : adminReviewText || null,
+          adminReview: adminReviewText.trim() || null,
         }),
       });
 
@@ -188,7 +215,7 @@ export default function AnimeThread({
         status: updated.status,
         adminReview: updated.adminReview,
       }));
-      setAdminMessage("Veredicto y estado actualizados correctamente.");
+      setAdminMessage("Veredicto, tier y categoría guardados correctamente.");
       setTimeout(() => setAdminMessage(""), 4000);
     } catch (err: unknown) {
       setAdminMessage(err instanceof Error ? err.message : "Error al guardar.");
@@ -376,20 +403,82 @@ export default function AnimeThread({
                       <span>{item.votesCount}</span>
                     </button>
 
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
-                        item.tier
-                      )}`}
-                    >
-                      {item.tier ? `Tier ${item.tier}` : "Sin tier"}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
-                        item.status
-                      )}`}
-                    >
-                      {statusLabels[item.status] ?? item.status}
-                    </span>
+                    {/* Controles interactivos para Admin */}
+                    {isAdmin ? (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={item.tier ?? ""}
+                          onChange={(e) =>
+                            handleQuickUpdate({
+                              tier: (e.target.value as "S" | "A" | "B" | "C") || null,
+                            })
+                          }
+                          className={`px-2 py-1 rounded-md font-semibold text-xs border cursor-pointer ${getTierBadgeClass(
+                            item.tier
+                          )} bg-[#121318] focus:outline-none`}
+                          title="Cambiar Tier (Admin)"
+                        >
+                          <option value="" className="bg-[#121318] text-zinc-400">
+                            Sin tier
+                          </option>
+                          <option value="S" className="bg-[#121318] text-amber-300">
+                            Tier S
+                          </option>
+                          <option value="A" className="bg-[#121318] text-blue-300">
+                            Tier A
+                          </option>
+                          <option value="B" className="bg-[#121318] text-cyan-300">
+                            Tier B
+                          </option>
+                          <option value="C" className="bg-[#121318] text-zinc-300">
+                            Tier C
+                          </option>
+                        </select>
+
+                        <select
+                          value={item.status}
+                          onChange={(e) =>
+                            handleQuickUpdate({
+                              status: e.target.value,
+                            })
+                          }
+                          className={`px-2 py-1 rounded-md font-medium text-xs border cursor-pointer ${getStatusBadgeClass(
+                            item.status
+                          )} bg-[#121318] focus:outline-none`}
+                          title="Mover categoría / estado (Admin)"
+                        >
+                          <option value="PENDING" className="bg-[#121318] text-amber-300">
+                            Lo veré
+                          </option>
+                          <option value="WATCHING" className="bg-[#121318] text-cyan-300">
+                            Viendo
+                          </option>
+                          <option value="COMPLETED" className="bg-[#121318] text-emerald-300">
+                            Terminado
+                          </option>
+                          <option value="DROPPED" className="bg-[#121318] text-zinc-400">
+                            Descartado
+                          </option>
+                        </select>
+                      </div>
+                    ) : (
+                      <>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
+                            item.tier
+                          )}`}
+                        >
+                          {item.tier ? `Tier ${item.tier}` : "Sin tier"}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
+                          {statusLabels[item.status] ?? item.status}
+                        </span>
+                      </>
+                    )}
 
                     {/* Botón de Moderación para borrar */}
                     {canDeleteRecommendation && (

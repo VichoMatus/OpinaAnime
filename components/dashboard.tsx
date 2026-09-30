@@ -142,6 +142,49 @@ export default function Dashboard({
     }
   }
 
+  // Actualización rápida de categoría (status) y tier desde la tarjeta para el Admin
+  async function handleQuickUpdate(
+    id: string,
+    updates: { tier?: "S" | "A" | "B" | "C" | null; status?: string }
+  ) {
+    const target = items.find((it) => it.id === id);
+    if (!target) return;
+
+    const prevTier = target.tier;
+    const prevStatus = target.status;
+
+    // Actualización optimista local
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, ...updates } : it))
+    );
+
+    try {
+      const res = await fetch(`/api/recommendations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(errorData.error || "No se pudo actualizar.");
+        // Revertir estado si falla
+        setItems((prev) =>
+          prev.map((it) =>
+            it.id === id ? { ...it, tier: prevTier, status: prevStatus } : it
+          )
+        );
+      }
+    } catch {
+      alert("Error de red al actualizar.");
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === id ? { ...it, tier: prevTier, status: prevStatus } : it
+        )
+      );
+    }
+  }
+
   async function handleToggleVote(id: string) {
     const target = items.find((it) => it.id === id);
     if (!target) return;
@@ -152,7 +195,6 @@ export default function Dashboard({
     const newHasVoted = !prevHasVoted;
     const newVotesCount = newHasVoted ? prevVotesCount + 1 : Math.max(0, prevVotesCount - 1);
 
-    // Actualización local
     setItems((prev) =>
       prev.map((it) =>
         it.id === id ? { ...it, hasVoted: newHasVoted, votesCount: newVotesCount } : it
@@ -272,7 +314,7 @@ export default function Dashboard({
 
   return (
     <main className="min-h-screen bg-[#0a0b0e] text-zinc-100 pb-20">
-      {/* Header / Navbar limpio sin logo, solo nombre */}
+      {/* Header / Navbar */}
       <header className="border-b border-[#1f2128] bg-[#0e0f14] sticky top-0 z-20">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link href="/" className="cursor-pointer">
@@ -396,7 +438,7 @@ export default function Dashboard({
           {session?.user?.role === "ADMIN" && (
             <div className="mb-6 flex flex-wrap items-center gap-2">
               <span className="font-sans text-xs font-semibold text-zinc-400 mr-1">
-                Admin:
+                Filtrar estado (Admin):
               </span>
               {filterTabs.map((tab) => (
                 <button
@@ -491,20 +533,85 @@ export default function Dashboard({
                                 <span>{item.votesCount}</span>
                               </button>
 
-                              <span
-                                className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
-                                  item.tier
-                                )}`}
-                              >
-                                {item.tier ? `Tier ${item.tier}` : "Sin tier"}
-                              </span>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
-                                  item.status
-                                )}`}
-                              >
-                                {statusLabels[item.status] ?? item.status}
-                              </span>
+                              {/* Controles para mover de categoría y agregar Tier: Interactivos para Admin */}
+                              {isAdmin ? (
+                                <div className="flex items-center gap-1.5">
+                                  {/* Selector de Tier directo */}
+                                  <select
+                                    value={item.tier ?? ""}
+                                    onChange={(e) =>
+                                      handleQuickUpdate(item.id, {
+                                        tier: (e.target.value as "S" | "A" | "B" | "C") || null,
+                                      })
+                                    }
+                                    className={`px-2 py-1 rounded-md font-semibold text-xs border cursor-pointer ${getTierBadgeClass(
+                                      item.tier
+                                    )} bg-[#121318] focus:outline-none`}
+                                    title="Asignar Tier (Admin)"
+                                  >
+                                    <option value="" className="bg-[#121318] text-zinc-400">
+                                      Sin tier
+                                    </option>
+                                    <option value="S" className="bg-[#121318] text-amber-300">
+                                      Tier S
+                                    </option>
+                                    <option value="A" className="bg-[#121318] text-blue-300">
+                                      Tier A
+                                    </option>
+                                    <option value="B" className="bg-[#121318] text-cyan-300">
+                                      Tier B
+                                    </option>
+                                    <option value="C" className="bg-[#121318] text-zinc-300">
+                                      Tier C
+                                    </option>
+                                  </select>
+
+                                  {/* Selector de Estado / Categoría directo */}
+                                  <select
+                                    value={item.status}
+                                    onChange={(e) =>
+                                      handleQuickUpdate(item.id, {
+                                        status: e.target.value,
+                                      })
+                                    }
+                                    className={`px-2 py-1 rounded-md font-medium text-xs border cursor-pointer ${getStatusBadgeClass(
+                                      item.status
+                                    )} bg-[#121318] focus:outline-none`}
+                                    title="Mover de categoría (Admin)"
+                                  >
+                                    <option value="PENDING" className="bg-[#121318] text-amber-300">
+                                      Lo veré
+                                    </option>
+                                    <option value="WATCHING" className="bg-[#121318] text-cyan-300">
+                                      Viendo
+                                    </option>
+                                    <option value="COMPLETED" className="bg-[#121318] text-emerald-300">
+                                      Terminado
+                                    </option>
+                                    <option value="DROPPED" className="bg-[#121318] text-zinc-400">
+                                      Descartado
+                                    </option>
+                                  </select>
+                                </div>
+                              ) : (
+                                /* Badges de solo lectura para usuarios estándar */
+                                <>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
+                                      item.tier
+                                    )}`}
+                                  >
+                                    {item.tier ? `Tier ${item.tier}` : "Sin tier"}
+                                  </span>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
+                                      item.status
+                                    )}`}
+                                  >
+                                    {statusLabels[item.status] ?? item.status}
+                                  </span>
+                                </>
+                              )}
 
                               {/* Indicador de Reseña de Admin */}
                               {item.adminReview && (

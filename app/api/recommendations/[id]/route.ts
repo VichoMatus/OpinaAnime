@@ -3,14 +3,25 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
+const ADMIN_EMAILS = [
+  process.env.ADMIN_EMAIL?.trim().toLowerCase(),
+  "vicentematus.games@gmail.com",
+  "vmatus2024@alu.uct.cl",
+].filter(Boolean) as string[];
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== "ADMIN") {
+  const userEmail = session?.user?.email?.toLowerCase();
+  const isAdmin =
+    session?.user?.role === "ADMIN" ||
+    (userEmail && ADMIN_EMAILS.includes(userEmail));
+
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json(
-      { error: "Solo el administrador puede actualizar el estado, tier o reseña." },
+      { error: "Solo el administrador puede actualizar la categoría, tier o reseña." },
       { status: 403 }
     );
   }
@@ -21,7 +32,13 @@ export async function PATCH(
   const validTiers = ["S", "A", "B", "C", null];
   const validStatuses = ["PENDING", "WATCHING", "COMPLETED", "DROPPED"];
 
-  if (body.tier !== undefined && !validTiers.includes(body.tier)) {
+  // Si envían string vacío para tier, convertirlo a null
+  const rawTier =
+    body.tier === "" || body.tier === "null" || body.tier === undefined
+      ? null
+      : body.tier;
+
+  if (body.tier !== undefined && !validTiers.includes(rawTier)) {
     return NextResponse.json({ error: "Tier no válido." }, { status: 400 });
   }
 
@@ -36,7 +53,7 @@ export async function PATCH(
   } = {};
 
   if (body.tier !== undefined) {
-    updateData.tier = body.tier;
+    updateData.tier = rawTier;
   }
   if (body.status !== undefined) {
     updateData.status = body.status;
@@ -89,7 +106,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Recomendación no encontrada." }, { status: 404 });
   }
 
-  const isAdmin = session.user.role === "ADMIN";
+  const userEmail = session.user.email?.toLowerCase();
+  const isAdmin =
+    session.user.role === "ADMIN" ||
+    (userEmail && ADMIN_EMAILS.includes(userEmail));
   const isAuthor = recommendation.authorId === session.user.id;
 
   if (!isAdmin && !isAuthor) {
@@ -99,7 +119,6 @@ export async function DELETE(
     );
   }
 
-  // Si no es ADMIN pero es el autor, solo puede borrar si nadie ha comentado aún
   if (!isAdmin && isAuthor && recommendation._count.comments > 0) {
     return NextResponse.json(
       {
