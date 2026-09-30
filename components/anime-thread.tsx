@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, ExternalLinkIcon, TrashIcon, StarIcon } from "@/components/icons";
@@ -114,6 +115,11 @@ export default function AnimeThread({
   // Regla de moderación para borrar la recomendación:
   // Admin puede siempre. Autor puede solo si nadie ha comentado todavía.
   const canDeleteRecommendation = isAdmin || (isAuthor && comments.length === 0);
+
+  async function handleSignOut() {
+    await signOut({ redirect: false });
+    window.location.href = "/login";
+  }
 
   // Guardar cambios de Administración (Tier, Estado, AdminReview)
   async function handleAdminSave(e: React.FormEvent) {
@@ -247,6 +253,12 @@ export default function AnimeThread({
                 ADMIN
               </span>
             )}
+            <button
+              onClick={handleSignOut}
+              className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              Salir
+            </button>
           </div>
         </div>
       </header>

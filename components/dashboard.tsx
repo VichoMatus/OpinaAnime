@@ -117,6 +117,11 @@ export default function Dashboard({
   }
 
   // Publicar nueva recomendación en el foro
+  async function handleSignOut() {
+    await signOut({ redirect: false });
+    window.location.href = "/login";
+  }
+
   async function handleCreateRecommendation(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedAnime || !rationale.trim() || submitting) return;
@@ -226,7 +231,7 @@ export default function Dashboard({
               )}
             </span>
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={handleSignOut}
               className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
             >
               Salir
