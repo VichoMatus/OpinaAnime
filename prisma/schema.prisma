@@ -82,3 +82,15 @@ model Vote {
   @@unique([userId, recommendationId])
   @@index([recommendationId])
 }
+
+model AnimeCatalog {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // ID de la API original (Kitsu/AniList)
+  title       String
+  titleEn     String?
+  imageUrl    String
+  type        String?
+  year        Int?
+
+  @@index([title])
+}

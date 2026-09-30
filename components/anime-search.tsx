@@ -4,33 +4,38 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SearchIcon } from "@/components/icons";
 
-export interface JikanAnime {
-  mal_id: number;
+export interface CatalogAnime {
+  id: string;
+  externalId: string;
   title: string;
-  title_english?: string | null;
+  titleEn?: string | null;
+  imageUrl: string;
+  type?: string | null;
+  year?: number | null;
+  // Compatibilidad hacia atrás con el formulario de recomendaciones
+  mal_id?: number | null;
   images: {
     jpg: {
       image_url: string;
       large_image_url?: string;
     };
   };
-  score?: number | null;
-  year?: number | null;
-  type?: string | null;
-  synopsis?: string | null;
 }
 
+// Alias para preservar compatibilidad con imports anteriores
+export type JikanAnime = CatalogAnime;
+
 interface AnimeSearchProps {
-  onSelectAnime: (anime: JikanAnime) => void;
+  onSelectAnime: (anime: CatalogAnime) => void;
   disabled?: boolean;
 }
 
 export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<JikanAnime[]>([]);
+  const [results, setResults] = useState<CatalogAnime[]>([]);
   const [loading, setLoading] = useState(false);
-  const [checkingMalId, setCheckingMalId] = useState<number | null>(null);
+  const [checkingItem, setCheckingItem] = useState<string | null>(null);
   const [searchError, setSearchError] = useState("");
   const [redirectNotice, setRedirectNotice] = useState("");
 
@@ -56,28 +61,57 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
       setSearchError("");
 
       try {
+        // Consulta directa al catálogo propio en PostgreSQL
         const res = await fetch(
-          `/api/anime/search?q=${encodeURIComponent(trimmed)}`,
+          `/api/catalog/search?q=${encodeURIComponent(trimmed)}`,
           { signal: abortControllerRef.current.signal }
         );
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || "Error al buscar el anime.");
+          throw new Error(errData.error || "Error al consultar el catálogo interno.");
         }
 
         const data = await res.json();
-        setResults(data.data ?? []);
+        const rawItems = Array.isArray(data) ? data : data.data || [];
+
+        // Mapear elementos a la estructura de CatalogAnime
+        const formatted: CatalogAnime[] = rawItems.map((item: {
+          id: string;
+          externalId: string;
+          title: string;
+          titleEn?: string | null;
+          imageUrl: string;
+          type?: string | null;
+          year?: number | null;
+        }) => ({
+          id: item.id,
+          externalId: item.externalId,
+          title: item.title,
+          titleEn: item.titleEn || null,
+          imageUrl: item.imageUrl,
+          type: item.type || "TV",
+          year: item.year || null,
+          mal_id: parseInt(item.externalId, 10) || null,
+          images: {
+            jpg: {
+              image_url: item.imageUrl,
+              large_image_url: item.imageUrl,
+            },
+          },
+        }));
+
+        setResults(formatted);
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         setSearchError(
-          err instanceof Error ? err.message : "No se pudo conectar con el servicio de anime."
+          err instanceof Error ? err.message : "No se pudo conectar con el catálogo."
         );
         setResults([]);
       } finally {
         setLoading(false);
       }
-    }, 380);
+    }, 350);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -85,14 +119,18 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
     };
   }, [query]);
 
-  async function handleSelect(anime: JikanAnime) {
-    setCheckingMalId(anime.mal_id);
+  async function handleSelect(anime: CatalogAnime) {
+    setCheckingItem(anime.id);
     setSearchError("");
     setRedirectNotice("");
 
     try {
-      // 1. Consultar a la API interna si el mal_id ya fue registrado en la base de datos
-      const res = await fetch(`/api/recommendations/check?mal_id=${anime.mal_id}`);
+      // 1. Consultar a la API interna si el anime ya fue registrado en el foro
+      const checkParams = new URLSearchParams();
+      if (anime.mal_id) checkParams.set("mal_id", String(anime.mal_id));
+      checkParams.set("title", anime.title);
+
+      const res = await fetch(`/api/recommendations/check?${checkParams.toString()}`);
       const data = await res.json();
 
       if (data.exists && data.recommendationId) {
@@ -111,14 +149,14 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
     } catch {
       setSearchError("Error al verificar disponibilidad del anime en la base de datos.");
     } finally {
-      setCheckingMalId(null);
+      setCheckingItem(null);
     }
   }
 
   return (
     <div className="relative w-full font-sans">
       <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-        Buscar en MyAnimeList:
+        Buscar en el Catálogo:
       </label>
 
       <div className="relative">
@@ -127,7 +165,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={disabled}
-          placeholder="Escribe el nombre del anime (ej. Frieren, Naruto...)"
+          placeholder="Escribe el nombre del anime (ej. Titan, Hero, Naruto...)"
           className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-md pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:opacity-50"
         />
         <div className="absolute left-3 top-3 text-zinc-400 pointer-events-none">
@@ -153,20 +191,20 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
         </p>
       )}
 
-      {/* Resultados desplegables */}
+      {/* Resultados desplegables desde el catálogo propio */}
       {results.length > 0 && (
         <div className="absolute left-0 right-0 z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl backdrop-blur">
           <div className="p-1.5 space-y-1">
             {results.map((anime) => (
               <button
-                key={anime.mal_id}
+                key={anime.id}
                 type="button"
                 onClick={() => handleSelect(anime)}
-                disabled={checkingMalId !== null}
+                disabled={checkingItem !== null}
                 className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 text-left transition-colors cursor-pointer disabled:opacity-50"
               >
                 <img
-                  src={anime.images.jpg.image_url}
+                  src={anime.imageUrl}
                   alt={anime.title}
                   className="w-12 h-16 object-cover rounded bg-zinc-950 shrink-0 border border-zinc-800"
                 />
@@ -174,20 +212,21 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
                   <h4 className="text-sm font-medium text-zinc-100 truncate">
                     {anime.title}
                   </h4>
-                  {anime.title_english && anime.title_english !== anime.title && (
-                    <p className="text-xs text-zinc-400 truncate">{anime.title_english}</p>
+                  {anime.titleEn && anime.titleEn !== anime.title && (
+                    <p className="text-xs text-zinc-400 truncate">{anime.titleEn}</p>
                   )}
                   <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-400">
                     <span className="rounded bg-zinc-800 px-1.5 py-0.5 border border-zinc-700">
                       {anime.type ?? "TV"}
                     </span>
                     {anime.year && <span>{anime.year}</span>}
-                    {anime.score && <span className="text-amber-400">★ {anime.score}</span>}
-                    <span className="text-indigo-400 font-mono">MAL #{anime.mal_id}</span>
+                    <span className="text-indigo-400 font-mono text-[10px]">
+                      ID #{anime.externalId}
+                    </span>
                   </div>
                 </div>
 
-                {checkingMalId === anime.mal_id && (
+                {checkingItem === anime.id && (
                   <span className="text-xs text-indigo-400 animate-pulse shrink-0">
                     Verificando...
                   </span>

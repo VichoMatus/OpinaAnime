@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import AnimeSearch, { JikanAnime } from "@/components/anime-search";
+import AnimeSearch, { CatalogAnime } from "@/components/anime-search";
 import { MessageSquareIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
@@ -100,14 +100,15 @@ export default function Dashboard({
   const [items, setItems] = useState<ForumRecommendation[]>(initialRecommendations);
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Estado del formulario de nueva recomendación con Jikan API
-  const [selectedAnime, setSelectedAnime] = useState<JikanAnime | null>(null);
+  // Estado del formulario de nueva recomendación con Catálogo Propio
+  const [selectedAnime, setSelectedAnime] = useState<CatalogAnime | null>(null);
   const [rationale, setRationale] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [syncingCatalog, setSyncingCatalog] = useState(false);
 
-  // Manejar selección desde Jikan API
-  function handleSelectAnime(anime: JikanAnime) {
+  // Manejar selección desde catálogo
+  function handleSelectAnime(anime: CatalogAnime) {
     setSelectedAnime(anime);
     setFormError("");
   }
@@ -121,6 +122,27 @@ export default function Dashboard({
   async function handleSignOut() {
     await signOut({ redirect: false });
     window.location.href = "/login";
+  }
+
+  // Sincronización manual de catálogo para Administrador
+  async function handleSyncCatalog() {
+    if (syncingCatalog) return;
+    setSyncingCatalog(true);
+
+    try {
+      const res = await fetch("/api/admin/sync-catalog");
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || `Catálogo sincronizado exitosamente (${data.totalInCatalog} animes).`);
+      } else {
+        alert(data.error || "No se pudo sincronizar el catálogo.");
+      }
+    } catch {
+      alert("Error de red al sincronizar el catálogo.");
+    } finally {
+      setSyncingCatalog(false);
+    }
   }
 
   // Toggle de voto (Like / Upvote) con actualización optimista
@@ -186,11 +208,9 @@ export default function Dashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: selectedAnime.title,
-          imageUrl:
-            selectedAnime.images.jpg.large_image_url ||
-            selectedAnime.images.jpg.image_url,
+          imageUrl: selectedAnime.imageUrl,
           rationale: rationale.trim(),
-          mal_id: selectedAnime.mal_id,
+          mal_id: selectedAnime.mal_id || (parseInt(selectedAnime.externalId, 10) || null),
         }),
       });
 
@@ -295,18 +315,18 @@ export default function Dashboard({
 
       {/* Layout Principal: Formulario Buscador + Feed de Foro */}
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[340px_1fr]">
-        {/* Columna Izquierda: Formulario Nueva Recomendación con Jikan API */}
+        {/* Columna Izquierda: Formulario Nueva Recomendación con Catálogo Propio */}
         <aside>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 sticky top-24 shadow-xl">
             <h2 className="font-sans text-xs uppercase tracking-[.2em] text-indigo-400 font-bold mb-4">
               Nueva Recomendación
             </h2>
 
-            {/* Paso 1: Buscador de Jikan API */}
+            {/* Paso 1: Buscador de Catálogo Interno */}
             {!selectedAnime ? (
               <div className="space-y-4">
                 <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-                  Busca cualquier título directamente en <b>MyAnimeList</b>. Verificaremos que no esté repetido en el foro antes de recomendarlo.
+                  Busca cualquier título en nuestro catálogo interno. Verificaremos que no esté repetido en el foro antes de recomendarlo.
                 </p>
                 <AnimeSearch onSelectAnime={handleSelectAnime} />
               </div>
@@ -315,7 +335,7 @@ export default function Dashboard({
               <form onSubmit={handleCreateRecommendation} className="space-y-4 font-sans">
                 <div className="rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-3 flex gap-3 items-center">
                   <img
-                    src={selectedAnime.images.jpg.image_url}
+                    src={selectedAnime.imageUrl}
                     alt={selectedAnime.title}
                     className="w-14 h-20 object-cover rounded bg-zinc-950 border border-zinc-700 shrink-0"
                   />
@@ -324,7 +344,7 @@ export default function Dashboard({
                       {selectedAnime.title}
                     </h3>
                     <p className="text-xs text-indigo-300 font-mono mt-0.5">
-                      MAL #{selectedAnime.mal_id}
+                      Catálogo #{selectedAnime.externalId}
                     </p>
                     <button
                       type="button"
@@ -385,11 +405,11 @@ export default function Dashboard({
             </span>
           </div>
 
-          {/* Fila de Filtros Exclusivos para Admin */}
+          {/* Fila de Filtros Exclusivos para Admin + Botón de Sincronización */}
           {session?.user?.role === "ADMIN" && (
             <div className="mb-6 flex flex-wrap items-center gap-2">
               <span className="font-sans text-xs font-medium text-zinc-400 mr-1">
-                Filtrar estado (Admin):
+                Admin:
               </span>
               {filterTabs.map((tab) => (
                 <button
@@ -405,6 +425,16 @@ export default function Dashboard({
                   {tab.label}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={handleSyncCatalog}
+                disabled={syncingCatalog}
+                className="font-sans text-xs px-3 py-1.5 rounded-md border border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60 hover:text-white transition-colors cursor-pointer disabled:opacity-50 sm:ml-auto"
+                title="Sincronizar catálogo con Kitsu API"
+              >
+                {syncingCatalog ? "Sincronizando..." : "🔄 Sincronizar Catálogo"}
+              </button>
             </div>
           )}
 
