@@ -28,21 +28,23 @@ enum Tier {
 }
 
 model User {
-  id           String          @id @default(cuid())
-  name         String?
-  email        String          @unique
-  passwordHash String
-  role         Role            @default(USER)
-  createdAt    DateTime        @default(now())
+  id              String           @id @default(cuid())
+  name            String?
+  email           String           @unique
+  passwordHash    String
+  role            Role             @default(USER)
+  createdAt       DateTime         @default(now())
   recommendations Recommendation[]
-  comments     Comment[]
+  comments        Comment[]
 }
 
 model Recommendation {
   id          String       @id @default(cuid())
+  mal_id      Int?         @unique
   title       String
   imageUrl    String
   rationale   String
+  adminReview String?
   tier        Tier?
   status      AnimeStatus  @default(PENDING)
   createdAt   DateTime     @default(now())
@@ -50,17 +52,19 @@ model Recommendation {
   authorId    String
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments    Comment[]
+
   @@index([status])
   @@index([tier])
 }
 
 model Comment {
-  id             String         @id @default(cuid())
-  body           String
-  createdAt      DateTime       @default(now())
-  authorId       String
+  id               String         @id @default(cuid())
+  body             String
+  createdAt        DateTime       @default(now())
+  authorId         String
   recommendationId String
-  author         User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  author           User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
   @@index([recommendationId, createdAt])
 }
