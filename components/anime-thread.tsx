@@ -66,13 +66,13 @@ const statusLabels: Record<string, string> = {
 function getTierBadgeClass(tier: string | null) {
   switch (tier) {
     case "S":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/40";
+      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
     case "A":
-      return "bg-indigo-500/15 text-indigo-300 border-indigo-500/40";
+      return "bg-blue-500/10 text-blue-300 border-blue-500/30";
     case "B":
-      return "bg-blue-500/15 text-blue-300 border-blue-500/40";
+      return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
     case "C":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+      return "bg-zinc-500/10 text-zinc-300 border-zinc-600";
     default:
       return "bg-zinc-800 text-zinc-400 border-zinc-700";
   }
@@ -81,13 +81,13 @@ function getTierBadgeClass(tier: string | null) {
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "PENDING":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/40";
+      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
     case "WATCHING":
-      return "bg-sky-500/15 text-sky-300 border-sky-500/40";
+      return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
     case "COMPLETED":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
     case "DROPPED":
-      return "bg-rose-500/15 text-rose-300 border-rose-500/40";
+      return "bg-zinc-800 text-zinc-400 border-zinc-700";
     default:
       return "bg-zinc-800 text-zinc-400 border-zinc-700";
   }
@@ -104,7 +104,6 @@ export default function AnimeThread({
   const [newCommentBody, setNewCommentBody] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
 
-  // Estados del panel de Admin
   const [adminTier, setAdminTier] = useState<string>(initialData.tier ?? "");
   const [adminStatus, setAdminStatus] = useState<string>(initialData.status);
   const [adminReviewText, setAdminReviewText] = useState<string>(initialData.adminReview ?? "");
@@ -113,7 +112,6 @@ export default function AnimeThread({
 
   const isAdmin = currentUser.role === "ADMIN";
   const isAuthor = item.authorId === currentUser.id;
-
   const canDeleteRecommendation = isAdmin || (isAuthor && comments.length === 0);
 
   async function handleSignOut() {
@@ -121,7 +119,6 @@ export default function AnimeThread({
     window.location.href = "/login";
   }
 
-  // Toggle de voto (Like / Upvote) con actualización optimista
   async function handleToggleVote() {
     const prevHasVoted = item.hasVoted;
     const prevVotesCount = item.votesCount;
@@ -129,14 +126,12 @@ export default function AnimeThread({
     const newHasVoted = !prevHasVoted;
     const newVotesCount = newHasVoted ? prevVotesCount + 1 : Math.max(0, prevVotesCount - 1);
 
-    // 1. Actualización optimista local
     setItem((prev) => ({
       ...prev,
       hasVoted: newHasVoted,
       votesCount: newVotesCount,
     }));
 
-    // 2. Llamada a la API
     try {
       const res = await fetch(`/api/recommendations/${item.id}/vote`, {
         method: "POST",
@@ -150,7 +145,6 @@ export default function AnimeThread({
           votesCount: data.votesCount,
         }));
       } else {
-        // Revertir si hay error en la respuesta
         setItem((prev) => ({
           ...prev,
           hasVoted: prevHasVoted,
@@ -158,7 +152,6 @@ export default function AnimeThread({
         }));
       }
     } catch {
-      // Revertir si falla la red
       setItem((prev) => ({
         ...prev,
         hasVoted: prevHasVoted,
@@ -167,7 +160,6 @@ export default function AnimeThread({
     }
   }
 
-  // Guardar cambios de Administración (Tier, Estado, AdminReview)
   async function handleAdminSave(e: React.FormEvent) {
     e.preventDefault();
     setAdminSaving(true);
@@ -205,10 +197,9 @@ export default function AnimeThread({
     }
   }
 
-  // Eliminar recomendación (Moderación)
   async function handleDeleteRecommendation() {
     const confirmText = isAdmin
-      ? "¿Estás seguro de eliminar esta recomendación como Administrador? Se borrará todo el hilo y sus comentarios."
+      ? "¿Estás seguro de eliminar este hilo como Administrador? Se borrará todo el hilo y sus comentarios."
       : "¿Estás seguro de que deseas eliminar tu recomendación?";
 
     if (!window.confirm(confirmText)) return;
@@ -231,7 +222,6 @@ export default function AnimeThread({
     }
   }
 
-  // Enviar comentario
   async function handleAddComment(e: React.FormEvent) {
     e.preventDefault();
     if (!newCommentBody.trim() || commentSubmitting) return;
@@ -259,7 +249,6 @@ export default function AnimeThread({
     }
   }
 
-  // Eliminar comentario (Moderación)
   async function handleDeleteComment(commentId: string) {
     if (!window.confirm("¿Seguro que deseas eliminar este comentario?")) return;
 
@@ -280,28 +269,34 @@ export default function AnimeThread({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20">
+    <div className="min-h-screen bg-[#0a0b0e] text-zinc-100 pb-20">
       {/* Top Navbar */}
-      <header className="border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-md sticky top-0 z-20">
+      <header className="border-b border-[#1f2128] bg-[#0e0f14] sticky top-0 z-20">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors font-sans"
+            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             <span>Volver al Foro</span>
           </Link>
 
+          <Link href="/" className="cursor-pointer">
+            <span className="text-lg font-bold tracking-wider text-white uppercase">
+              OPINANIME
+            </span>
+          </Link>
+
           <div className="flex items-center gap-3 font-sans text-xs">
             <span className="text-zinc-400">{currentUser.name || currentUser.email}</span>
             {isAdmin && (
-              <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-semibold text-indigo-400 border border-indigo-500/30">
+              <span className="rounded bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/30">
                 ADMIN
               </span>
             )}
             <button
               onClick={handleSignOut}
-              className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors cursor-pointer"
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
             >
               Salir
             </button>
@@ -310,26 +305,25 @@ export default function AnimeThread({
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-8">
-        {/* Aviso de anime existente */}
         {notice === "already_exists" && (
-          <div className="mb-6 rounded-lg bg-indigo-950/60 border border-indigo-500/60 p-4 text-indigo-200 text-sm font-sans flex items-center justify-between">
+          <div className="mb-6 rounded-lg bg-blue-950/30 border border-blue-500/40 p-4 text-blue-200 text-sm font-sans flex items-center justify-between">
             <div>
-              <p className="font-semibold text-indigo-100">
-                ⚡ ¡Este anime ya fue recomendado anteriormente!
+              <p className="font-semibold text-white">
+                Este anime ya está registrado en el foro.
               </p>
-              <p className="text-xs text-indigo-300 mt-0.5">
-                Te hemos redirigido a su hilo oficial para que puedas leer las opiniones y participar en el debate.
+              <p className="text-xs text-blue-300 mt-0.5">
+                Te hemos redirigido a su hilo para debatir y votar.
               </p>
             </div>
           </div>
         )}
 
         {/* Ficha Principal del Anime */}
-        <article className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden shadow-2xl">
+        <article className="rounded-xl border border-[#22242a] bg-[#121318] overflow-hidden shadow-sm">
           <div className="p-6 sm:p-8 grid gap-8 md:grid-cols-[220px_1fr]">
-            {/* Poster del anime */}
+            {/* Poster */}
             <div className="space-y-3">
-              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-md">
+              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
                 <img
                   src={item.imageUrl}
                   alt={item.title}
@@ -342,7 +336,7 @@ export default function AnimeThread({
                   href={`https://myanimelist.net/anime/${item.mal_id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-md bg-zinc-950 border border-zinc-700 text-xs font-sans text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-md bg-[#181920] border border-zinc-700 text-xs font-sans text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
                 >
                   <span>Ver en MyAnimeList</span>
                   <ExternalLinkIcon className="w-3.5 h-3.5" />
@@ -353,13 +347,13 @@ export default function AnimeThread({
             {/* Información y Fundamento */}
             <div className="flex flex-col justify-between">
               <div>
-                {/* Cabecera: Título, Autor, Voto y Badges */}
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-800 pb-5">
+                {/* Cabecera */}
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1f2128] pb-5">
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-serif text-zinc-100">{item.title}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{item.title}</h1>
                     <p className="mt-1 font-sans text-xs text-zinc-400">
                       Recomendado por{" "}
-                      <span className="text-zinc-200 font-medium">
+                      <span className="text-zinc-200">
                         {item.author.name || item.author.email}
                       </span>{" "}
                       el {new Date(item.createdAt).toLocaleDateString("es-ES")}
@@ -371,10 +365,10 @@ export default function AnimeThread({
                     <button
                       type="button"
                       onClick={handleToggleVote}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold border transition-all duration-150 cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold border transition-colors cursor-pointer ${
                         item.hasVoted
-                          ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25"
-                          : "bg-zinc-950/70 border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500"
+                          ? "bg-rose-600 text-white border-rose-500"
+                          : "bg-[#181920] border-[#2a2c35] text-zinc-300 hover:text-white hover:border-zinc-500"
                       }`}
                       title={item.hasVoted ? "Quitar me gusta" : "Apoyar esta recomendación"}
                     >
@@ -383,26 +377,26 @@ export default function AnimeThread({
                     </button>
 
                     <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold border ${getTierBadgeClass(
+                      className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
                         item.tier
                       )}`}
                     >
                       {item.tier ? `Tier ${item.tier}` : "Sin tier"}
                     </span>
                     <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold border ${getStatusBadgeClass(
+                      className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
                         item.status
                       )}`}
                     >
                       {statusLabels[item.status] ?? item.status}
                     </span>
 
-                    {/* Botón de Moderación para borrar el anime */}
+                    {/* Botón de Moderación para borrar */}
                     {canDeleteRecommendation && (
                       <button
                         onClick={handleDeleteRecommendation}
                         title="Eliminar recomendación"
-                        className="ml-1 p-1.5 rounded-md border border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-rose-400 hover:border-rose-600 transition-colors cursor-pointer"
+                        className="ml-1 p-1.5 rounded-md border border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:border-rose-600 transition-colors cursor-pointer"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -412,11 +406,11 @@ export default function AnimeThread({
 
                 {/* Fundamento original del usuario */}
                 <div className="mt-6">
-                  <h3 className="font-sans text-xs uppercase tracking-widest text-indigo-400 font-bold mb-2">
+                  <h3 className="font-sans text-xs uppercase tracking-widest text-zinc-400 font-bold mb-2">
                     Fundamento de la Recomendación
                   </h3>
-                  <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 p-4">
-                    <p className="text-zinc-200 font-serif text-base leading-relaxed whitespace-pre-wrap">
+                  <div className="rounded-lg bg-[#0a0b0e] border border-[#22242a] p-4">
+                    <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
                       {item.rationale}
                     </p>
                   </div>
@@ -425,9 +419,9 @@ export default function AnimeThread({
             </div>
           </div>
 
-          {/* Reseña Final del Administrador (si ya fue escrita) */}
+          {/* Reseña Final del Administrador */}
           {item.adminReview && (
-            <div className="border-t border-zinc-800 bg-gradient-to-br from-indigo-950/30 to-zinc-900 p-6 sm:p-8">
+            <div className="border-t border-[#1f2128] bg-[#0e0f14] p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-3">
                 <StarIcon className="w-5 h-5 text-amber-400" />
                 <h3 className="font-sans text-sm uppercase tracking-wider font-bold text-amber-300">
@@ -443,82 +437,81 @@ export default function AnimeThread({
                   </span>
                 )}
               </div>
-              <p className="text-zinc-200 font-serif text-base leading-relaxed italic bg-zinc-950/50 p-5 rounded-lg border border-indigo-900/40">
+              <p className="text-zinc-200 text-base leading-relaxed italic bg-[#121318] p-5 rounded-lg border border-[#22242a]">
                 "{item.adminReview}"
               </p>
             </div>
           )}
 
-          {/* Panel de Gestión Exclusivo para ADMIN */}
+          {/* Panel de Moderación y Veredicto exclusivo de Admin */}
           {isAdmin && (
-            <div className="border-t border-zinc-800 bg-zinc-950/80 p-6 sm:p-8 font-sans">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-indigo-400 uppercase tracking-wider">
-                  Panel de Moderación & Veredicto (Admin)
-                </h3>
-                <span className="text-xs text-zinc-500">Solo visible para administradores</span>
-              </div>
+            <div className="border-t border-[#1f2128] bg-[#101116] p-6 sm:p-8 font-sans">
+              <h3 className="text-sm uppercase tracking-wider font-bold text-zinc-300 mb-4">
+                Panel de Veredicto (Admin)
+              </h3>
 
               <form onSubmit={handleAdminSave} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Estado de visualización:</label>
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
+                      Asignar Tier:
+                    </label>
                     <select
-                      value={adminStatus}
-                      onChange={(e) => setAdminStatus(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      value={adminTier}
+                      onChange={(e) => setAdminTier(e.target.value)}
+                      className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-500"
                     >
-                      <option value="PENDING">Lo veré</option>
-                      <option value="WATCHING">Viendo actualmente</option>
-                      <option value="COMPLETED">Terminado (Habilita Reseña)</option>
-                      <option value="DROPPED">Descartado</option>
+                      <option value="">Sin tier asignado</option>
+                      <option value="S">Tier S (Obra Maestra)</option>
+                      <option value="A">Tier A (Excelente)</option>
+                      <option value="B">Tier B (Bueno / Recomendable)</option>
+                      <option value="C">Tier C (Regular / Pasable)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Clasificación Tier:</label>
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
+                      Estado de Visualización:
+                    </label>
                     <select
-                      value={adminTier}
-                      onChange={(e) => setAdminTier(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      value={adminStatus}
+                      onChange={(e) => setAdminStatus(e.target.value)}
+                      className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-500"
                     >
-                      <option value="">Sin tier</option>
-                      <option value="S">Tier S (Obra Maestra)</option>
-                      <option value="A">Tier A (Excelente)</option>
-                      <option value="B">Tier B (Bueno)</option>
-                      <option value="C">Tier C (Regular / Pasable)</option>
+                      <option value="PENDING">Lo veré (Pendiente)</option>
+                      <option value="WATCHING">Viendo actualmente</option>
+                      <option value="COMPLETED">Terminado</option>
+                      <option value="DROPPED">Descartado</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Textarea exclusivo de Reseña Final cuando el estado es COMPLETED */}
-                {adminStatus === "COMPLETED" && (
-                  <div className="space-y-1.5 animate-fadeIn">
-                    <label className="block text-xs font-semibold text-amber-400">
-                      Reseña y Veredicto Final del Administrador:
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={adminReviewText}
-                      onChange={(e) => setAdminReviewText(e.target.value)}
-                      placeholder="Escribe tu análisis final, opinión y justificación del tier para que toda la comunidad lo vea..."
-                      className="w-full bg-zinc-900 border border-amber-500/40 text-zinc-100 placeholder-zinc-500 rounded-md p-3 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
+                    Reseña Final del Administrador:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={adminReviewText}
+                    onChange={(e) => setAdminReviewText(e.target.value)}
+                    placeholder="Escribe tu análisis final, opinión y conclusión al terminar el anime..."
+                    className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+
+                {adminMessage && (
+                  <p className="text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-lg">
+                    {adminMessage}
+                  </p>
                 )}
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={adminSaving}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-5 py-2.5 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-                  >
-                    {adminSaving ? "Guardando..." : "Guardar Veredicto del Admin"}
-                  </button>
-                  {adminMessage && (
-                    <span className="text-xs text-indigo-300 font-sans">{adminMessage}</span>
-                  )}
-                </div>
+                <button
+                  type="submit"
+                  disabled={adminSaving}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs py-2 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {adminSaving ? "Guardando veredicto..." : "Guardar Cambios de Admin"}
+                </button>
               </form>
             </div>
           )}
@@ -526,34 +519,30 @@ export default function AnimeThread({
 
         {/* Sección de Debate / Comentarios */}
         <section className="mt-10 font-sans">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-6">
-            <h2 className="text-xl font-serif text-zinc-100">
-              Debate de la Comunidad ({comments.length})
+          <div className="flex items-center justify-between border-b border-[#1f2128] pb-3 mb-6">
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Hilos de Debate ({comments.length})
             </h2>
-            <span className="text-xs text-zinc-400">Opina con respeto y sin spoilers graves</span>
           </div>
 
-          {/* Formulario para publicar nuevo comentario */}
+          {/* Formulario de nuevo comentario */}
           <form onSubmit={handleAddComment} className="mb-8">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-              <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
-                Añadir tu opinión al debate:
-              </label>
+            <div className="bg-[#121318] border border-[#22242a] rounded-xl p-4 shadow-sm">
               <textarea
                 required
                 rows={3}
                 value={newCommentBody}
                 onChange={(e) => setNewCommentBody(e.target.value)}
-                placeholder="¿Estás de acuerdo con esta recomendación? ¿Vale la pena verla? Comparte tu punto de vista..."
-                className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-colors"
+                placeholder="Comparte tu opinión sin spoilers..."
+                className="w-full bg-[#0a0b0e] border border-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
               />
               <div className="mt-3 flex justify-end">
                 <button
                   type="submit"
-                  disabled={commentSubmitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-5 py-2 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                  disabled={commentSubmitting || !newCommentBody.trim()}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs py-2 px-5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {commentSubmitting ? "Publicando..." : "Publicar Comentario"}
+                  {commentSubmitting ? "Comentando..." : "Publicar Comentario"}
                 </button>
               </div>
             </div>
@@ -562,64 +551,45 @@ export default function AnimeThread({
           {/* Lista de comentarios */}
           <div className="space-y-4">
             {comments.length === 0 ? (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-8 text-center text-zinc-400 text-sm">
+              <div className="rounded-xl border border-[#22242a] bg-[#121318] p-8 text-center text-zinc-400 text-sm">
                 Aún no hay comentarios en este debate. ¡Sé el primero en opinar!
               </div>
             ) : (
               comments.map((comment) => {
                 const isCommentAuthor = comment.authorId === currentUser.id;
-                const canDeleteComment = isAdmin || isCommentAuthor;
+                const canDelete = isAdmin || isCommentAuthor;
 
                 return (
                   <div
                     key={comment.id}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors"
+                    className="rounded-xl border border-[#22242a] bg-[#121318] p-4"
                   >
-                    <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center justify-between text-xs text-zinc-400 mb-2 pb-2 border-b border-[#1f2128]">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-200 text-sm">
+                        <span className="font-semibold text-zinc-200">
                           {comment.author.name || comment.author.email}
                         </span>
-
                         {comment.author.role === "ADMIN" && (
-                          <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-bold text-indigo-400 border border-indigo-500/30">
+                          <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/30">
                             ADMIN
                           </span>
                         )}
-
-                        {comment.authorId === item.authorId && (
-                          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400 border border-zinc-700">
-                            Autor del hilo
-                          </span>
-                        )}
-
-                        <span className="text-xs text-zinc-500">
-                          {new Date(comment.createdAt).toLocaleDateString("es-ES", {
-                            day: "2-digit",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
+                        <span>•</span>
+                        <span>{new Date(comment.createdAt).toLocaleDateString("es-ES")}</span>
                       </div>
 
-                      {/* Botón de Moderación para borrar comentario */}
-                      {canDeleteComment && (
+                      {canDelete && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
-                          title={
-                            isAdmin && !isCommentAuthor
-                              ? "Eliminar comentario como Moderador/Admin"
-                              : "Eliminar tu comentario"
-                          }
+                          title="Eliminar comentario"
                           className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
 
-                    <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
                       {comment.body}
                     </p>
                   </div>
