@@ -35,7 +35,7 @@ export interface RecommendationDetail {
   imageUrl: string;
   rationale: string;
   adminReview: string | null;
-  tier: "S" | "A" | "B" | "C" | null;
+  tier: "S" | "A" | "B" | "C" | "D" | "E" | null;
   status: "PENDING" | "WATCHING" | "COMPLETED" | "DROPPED" | string;
   createdAt: string | Date;
   authorId: string;
@@ -66,13 +66,17 @@ const statusLabels: Record<string, string> = {
 function getTierBadgeClass(tier: string | null) {
   switch (tier) {
     case "S":
-      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+      return "bg-red-500/10 text-red-300 border-red-500/30";
     case "A":
-      return "bg-blue-500/10 text-blue-300 border-blue-500/30";
+      return "bg-orange-500/10 text-orange-300 border-orange-500/30";
     case "B":
-      return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
+      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
     case "C":
-      return "bg-zinc-500/10 text-zinc-300 border-zinc-600";
+      return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+    case "D":
+      return "bg-green-500/10 text-green-300 border-green-500/30";
+    case "E":
+      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
     default:
       return "bg-zinc-800 text-zinc-400 border-zinc-700";
   }
@@ -120,7 +124,7 @@ export default function AnimeThread({
   }
 
   // Actualización rápida directa de Tier o Estado
-  async function handleQuickUpdate(updates: { tier?: "S" | "A" | "B" | "C" | null; status?: string }) {
+  async function handleQuickUpdate(updates: { tier?: "S" | "A" | "B" | "C" | "D" | "E" | null; status?: string }) {
     const prevTier = item.tier;
     const prevStatus = item.status;
 
@@ -410,7 +414,7 @@ export default function AnimeThread({
                           value={item.tier ?? ""}
                           onChange={(e) =>
                             handleQuickUpdate({
-                              tier: (e.target.value as "S" | "A" | "B" | "C") || null,
+                              tier: (e.target.value as "S" | "A" | "B" | "C" | "D" | "E") || null,
                             })
                           }
                           className={`px-2 py-1 rounded-md font-semibold text-xs border cursor-pointer ${getTierBadgeClass(
@@ -430,8 +434,14 @@ export default function AnimeThread({
                           <option value="B" className="bg-[#121318] text-cyan-300">
                             Tier B
                           </option>
-                          <option value="C" className="bg-[#121318] text-zinc-300">
+                          <option value="C" className="bg-[#121318] text-yellow-300">
                             Tier C
+                          </option>
+                          <option value="D" className="bg-[#121318] text-green-300">
+                            Tier D
+                          </option>
+                          <option value="E" className="bg-[#121318] text-emerald-300">
+                            Tier E
                           </option>
                         </select>
 
@@ -555,6 +565,8 @@ export default function AnimeThread({
                       <option value="A">Tier A (Excelente)</option>
                       <option value="B">Tier B (Bueno / Recomendable)</option>
                       <option value="C">Tier C (Regular / Pasable)</option>
+                      <option value="D">Tier D (Mediocre)</option>
+                      <option value="E">Tier E (Malo)</option>
                     </select>
                   </div>
 
@@ -581,9 +593,14 @@ export default function AnimeThread({
                   </label>
                   <textarea
                     rows={3}
+                    required={adminStatus === "COMPLETED"}
                     value={adminReviewText}
                     onChange={(e) => setAdminReviewText(e.target.value)}
-                    placeholder="Escribe tu análisis final, opinión y conclusión al terminar el anime..."
+                    placeholder={
+                      adminStatus === "COMPLETED"
+                        ? "Debes escribir tu opinión final antes de marcar el anime como Terminado (Obligatorio)..."
+                        : "Escribe tu análisis final, opinión y conclusión al terminar el anime..."
+                    }
                     className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 resize-none"
                   />
                 </div>

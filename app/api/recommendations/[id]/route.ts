@@ -29,7 +29,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const validTiers = ["S", "A", "B", "C", null];
+  const validTiers = ["S", "A", "B", "C", "D", "E", null];
   const validStatuses = ["PENDING", "WATCHING", "COMPLETED", "DROPPED"];
 
   // Si envían string vacío para tier, convertirlo a null
@@ -46,8 +46,32 @@ export async function PATCH(
     return NextResponse.json({ error: "Estado no válido." }, { status: 400 });
   }
 
+  // Validación estricta: Si se envía status: "COMPLETED", el campo adminReview no puede estar vacío ni ser nulo
+  if (body.status === "COMPLETED") {
+    const incomingReview =
+      body.adminReview !== undefined
+        ? (body.adminReview ? String(body.adminReview).trim() : "")
+        : null;
+
+    let reviewToCheck = incomingReview;
+    if (reviewToCheck === null) {
+      const existing = await prisma.recommendation.findUnique({
+        where: { id },
+        select: { adminReview: true },
+      });
+      reviewToCheck = existing?.adminReview ? existing.adminReview.trim() : "";
+    }
+
+    if (!reviewToCheck) {
+      return NextResponse.json(
+        { error: "Debes escribir tu opinión final antes de marcar el anime como Terminado" },
+        { status: 400 }
+      );
+    }
+  }
+
   const updateData: {
-    tier?: "S" | "A" | "B" | "C" | null;
+    tier?: "S" | "A" | "B" | "C" | "D" | "E" | null;
     status?: "PENDING" | "WATCHING" | "COMPLETED" | "DROPPED";
     adminReview?: string | null;
   } = {};

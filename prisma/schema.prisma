@@ -25,6 +25,8 @@ enum Tier {
   A
   B
   C
+  D
+  E
 }
 
 model User {
@@ -47,6 +49,7 @@ model Recommendation {
   rationale   String
   adminReview String?
   tier        Tier?
+  tierOrder   Int          @default(0)
   status      AnimeStatus  @default(PENDING)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
