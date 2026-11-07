@@ -107,7 +107,7 @@ export default function Dashboard({
   const [activeTab, setActiveTab] = useState<"foro" | "viendo" | "tierlist">("foro");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"recientes" | "vistos" | "viendo" | "votados" | "comentados" | "tier">("recientes");
+  const [sortBy, setSortBy] = useState<"recientes" | "vistos" | "viendo" | "votados" | "comentados" | "tier">("votados");
 
   const [selectedAnime, setSelectedAnime] = useState<CatalogAnime | null>(null);
   const [rationale, setRationale] = useState("");
@@ -344,7 +344,8 @@ export default function Dashboard({
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     if (sortBy === "votados") {
-      return b.votesCount - a.votesCount;
+      if (b.votesCount !== a.votesCount) return b.votesCount - a.votesCount;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     if (sortBy === "comentados") {
       return b.commentsCount - a.commentsCount;
@@ -582,10 +583,10 @@ export default function Dashboard({
                       onChange={(e) => setSortBy(e.target.value as any)}
                       className="bg-[#121318] border border-[#22242a] rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                     >
+                      <option value="votados">Más me gusta / apoyados</option>
                       <option value="recientes">Más recientes</option>
                       <option value="vistos">Vistos / Terminados primero</option>
                       <option value="viendo">Viendo actualmente primero</option>
-                      <option value="votados">Más votos / apoyados</option>
                       <option value="comentados">Más comentarios</option>
                       <option value="tier">Por Tier (Mejor clasificados)</option>
                     </select>
