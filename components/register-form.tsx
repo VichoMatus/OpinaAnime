@@ -19,6 +19,11 @@ export default function RegisterForm() {
     const name = String(data.get("name") ?? "");
     const email = String(data.get("email") ?? "");
     const password = String(data.get("password") ?? "");
+    if (new TextEncoder().encode(password).length > 72) {
+      setError("Tu contraseña es demasiado larga (máximo 72 caracteres; los emojis y las tildes cuentan más).");
+      setBusy(false);
+      return;
+    }
     try {
       const response = await fetch("/api/register", {
         method: "POST",
@@ -63,7 +68,7 @@ export default function RegisterForm() {
       </div>
       <div className="form-field">
         <label className="form-label" htmlFor="register-password">Contraseña</label>
-        <PasswordInput required minLength={8} maxLength={72} id="register-password" name="password" autoComplete="new-password" aria-invalid={Boolean(error)} aria-describedby={error ? "register-form-error" : undefined} placeholder="Contraseña (8–72 bytes)" />
+        <PasswordInput required minLength={8} maxLength={72} id="register-password" name="password" autoComplete="new-password" aria-invalid={Boolean(error)} aria-describedby={error ? "register-form-error" : undefined} placeholder="Mínimo 8 caracteres" />
       </div>
       {error && <p id="register-form-error" role="alert" className="form-error">{error}</p>}
       <button type="submit" disabled={busy} className="btn btn-primary w-full">{busy ? "Creando cuenta..." : "Crear cuenta"}</button>

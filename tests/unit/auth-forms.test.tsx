@@ -63,6 +63,16 @@ describe("register-form", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("rechaza antes de enviar una contraseña que supera 72 bytes UTF-8", async () => {
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "nami@example.com" } });
+    fireEvent.change(document.querySelector('input[name="password"]')!, { target: { value: "á".repeat(37) } });
+    fireEvent.submit(screen.getByRole("button", { name: "Crear cuenta" }).closest("form")!);
+    expect((await screen.findByRole("alert")).textContent).toBe("Tu contraseña es demasiado larga (máximo 72 caracteres; los emojis y las tildes cuentan más).");
+    expect(fetch).not.toHaveBeenCalled();
+    expect((screen.getByRole("button", { name: "Crear cuenta" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("asocia errores de registro con los campos de email y contraseña", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false, json: async () => ({ error: "Correo inválido." }) } as Response);
     render(<RegisterForm />);
@@ -94,4 +104,14 @@ it("asocia errores de login con los campos de email y contraseña", async () => 
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.getAttribute("aria-describedby")).toBe(error.id);
   }
+});
+
+it("muestra un mensaje amable y vuelve a habilitar el botón si falla la conexión al iniciar sesión", async () => {
+  mocks.signIn.mockRejectedValue(new Error("network failure"));
+  render(<LoginForm />);
+  fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "nami@example.com" } });
+  fireEvent.change(document.querySelector('input[name="password"]')!, { target: { value: "password-123" } });
+  fireEvent.submit(screen.getByRole("button", { name: "Iniciar sesión" }).closest("form")!);
+  expect((await screen.findByRole("alert")).textContent).toBe("No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.");
+  expect((screen.getByRole("button", { name: "Iniciar sesión" }) as HTMLButtonElement).disabled).toBe(false);
 });

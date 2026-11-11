@@ -50,3 +50,15 @@ test("registro duplicado muestra error y no crea sesión", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test("signout devuelve una URL del mismo origen para un callbackUrl con barras normalizadas", async ({ request, baseURL }) => {
+  const csrfResponse = await request.get("/api/auth/csrf");
+  expect(csrfResponse.ok()).toBeTruthy();
+  const { csrfToken } = await csrfResponse.json() as { csrfToken: string };
+  const response = await request.post("/api/auth/signout", {
+    form: { csrfToken, callbackUrl: "/.//evil.com", json: "true" },
+  });
+  expect(response.ok()).toBeTruthy();
+  const { url } = await response.json() as { url: string };
+  expect(new URL(url, baseURL).origin).toBe(new URL(baseURL!).origin);
+});
