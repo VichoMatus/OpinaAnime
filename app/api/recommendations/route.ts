@@ -2,6 +2,7 @@ import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { validateRationale } from "@/lib/community";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -9,7 +10,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
+  }
   const title = String(body.title ?? "").trim();
   const imageUrl = String(body.imageUrl ?? "").trim();
   const rationale = String(body.rationale ?? "").trim();
@@ -21,6 +27,11 @@ export async function POST(request: Request) {
       { error: "Completa el título, la imagen y el fundamento." },
       { status: 400 }
     );
+  }
+
+  const rationaleError = validateRationale(rationale);
+  if (rationaleError) {
+    return NextResponse.json({ error: rationaleError }, { status: 400 });
   }
 
   // Verificar si ya existe este mal_id para evitar duplicados

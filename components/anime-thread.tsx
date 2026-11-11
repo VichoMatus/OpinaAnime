@@ -6,6 +6,7 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import { getTierBadgeClass, getTierBadgeStyle } from "@/lib/tier-styles";
 import { ExternalLinkIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
+import { COMMENT_MAX, STATUS_LABELS, getStatusBadgeClass } from "@/lib/community";
 
 export type Role = "ADMIN" | "USER";
 
@@ -21,6 +22,7 @@ export interface CommentItem {
   body: string;
   createdAt: string | Date;
   authorId: string;
+  parentId?: string | null;
   author: {
     id: string;
     name: string | null;
@@ -37,7 +39,7 @@ export interface RecommendationDetail {
   rationale: string;
   adminReview: string | null;
   tier: "S" | "A" | "B" | "C" | "D" | "E" | null;
-  status: "PENDING" | "WATCHING" | "COMPLETED" | "DROPPED" | string;
+  status: string;
   createdAt: string | Date;
   authorId: string;
   author: {
@@ -57,26 +59,7 @@ interface AnimeThreadProps {
   notice?: string;
 }
 
-const statusLabels: Record<string, string> = {
-  PENDING: "Lo veré",
-  WATCHING: "Viendo actualmente",
-  COMPLETED: "Terminado",
-  DROPPED: "Descartado",
-};
-
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case "PENDING":
-      return "bg-warning-soft text-warning border-warning-border";
-    case "WATCHING":
-      return "bg-info-soft text-info border-info-border";
-    case "COMPLETED":
-      return "bg-success-soft text-success border-success-border";
-    case "DROPPED":
-    default:
-      return "bg-surface-subtle text-fg-muted border-border-strong";
-  }
-}
+const statusLabels: Record<string, string> = STATUS_LABELS;
 
 export default function AnimeThread({
   recommendation: initialData,
@@ -94,6 +77,10 @@ export default function AnimeThread({
   const [newCommentBody, setNewCommentBody] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentError, setCommentError] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState("");
 
   const [adminTier, setAdminTier] = useState<string>(initialData.tier ?? "");
   const [adminStatus, setAdminStatus] = useState<string>(initialData.status);
@@ -272,8 +259,47 @@ export default function AnimeThread({
     }
   }
 
+  function openReply(commentId: string) {
+    setReplyingTo(commentId);
+    setReplyBody("");
+    setReplyError("");
+  }
+
+  async function handleAddReply(e: React.FormEvent, parentId: string) {
+    e.preventDefault();
+    if (!replyBody.trim() || replySubmitting) return;
+
+    setReplySubmitting(true);
+    setReplyError("");
+    try {
+      const res = await fetch(`/api/recommendations/${item.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: replyBody, parentId }),
+      });
+
+      if (res.ok) {
+        const newReply = await res.json();
+        setComments((prev) => [...prev, newReply]);
+        setReplyingTo(null);
+        setReplyBody("");
+      } else {
+        const err = await res.json();
+        setReplyError(err.error || "No pudimos publicar tu respuesta.");
+      }
+    } catch {
+      setReplyError("Error de conexión al publicar tu respuesta.");
+    } finally {
+      setReplySubmitting(false);
+    }
+  }
+
   async function handleDeleteComment(commentId: string) {
-    if (!window.confirm("¿Seguro que deseas eliminar este comentario?")) return;
+    const hasReplies = comments.some((c) => c.parentId === commentId);
+    const message = hasReplies
+      ? "¿Seguro que deseas eliminar este comentario? También se borrarán sus respuestas."
+      : "¿Seguro que deseas eliminar este comentario?";
+    if (!window.confirm(message)) return;
     setCommentError("");
 
     try {
@@ -282,7 +308,7 @@ export default function AnimeThread({
       });
 
       if (res.ok) {
-        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentId !== commentId));
       } else {
         const err = await res.json();
         setCommentError(err.error || "No se pudo eliminar el comentario.");
@@ -290,6 +316,70 @@ export default function AnimeThread({
     } catch {
       setCommentError("Error de conexión al eliminar el comentario.");
     }
+  }
+
+  const topLevelComments = comments.filter((c) => !c.parentId);
+  const repliesByParent = new Map<string, CommentItem[]>();
+  for (const c of comments) {
+    if (!c.parentId) continue;
+    const list = repliesByParent.get(c.parentId) ?? [];
+    list.push(c);
+    repliesByParent.set(c.parentId, list);
+  }
+
+  function renderComment(comment: CommentItem, isReply: boolean) {
+    const isCommentAuthor = comment.authorId === currentUser.id;
+    const canDelete = isAdmin || isCommentAuthor;
+    const threadId = comment.parentId ?? comment.id;
+
+    return (
+      <article
+        className={`rounded-2xl border border-border bg-surface shadow-card ${
+          isReply ? "p-3.5 sm:p-4" : "p-4 sm:p-5"
+        }`}
+      >
+        <div className="flex items-center justify-between text-xs sm:text-sm text-fg-muted mb-3 pb-2.5 border-b border-border">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-fg">
+              {comment.author.name || comment.author.email}
+            </span>
+            {comment.author.role === "ADMIN" && (
+              <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/25">
+                ADMIN
+              </span>
+            )}
+            <span aria-hidden="true">•</span>
+            <span>{new Date(comment.createdAt).toLocaleDateString("es-ES")}</span>
+          </div>
+
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => handleDeleteComment(comment.id)}
+              title="Eliminar comentario"
+              aria-label="Eliminar comentario"
+              className="p-1.5 rounded-lg text-fg-subtle hover:text-danger hover:bg-danger-soft transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <p className="text-fg text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+          {comment.body}
+        </p>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => openReply(threadId)}
+            className="text-xs sm:text-sm font-semibold text-primary hover:text-primary-hover underline-offset-2 hover:underline cursor-pointer focus-visible:outline-2 focus-visible:outline-ring rounded"
+          >
+            Responder
+          </button>
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -426,6 +516,7 @@ export default function AnimeThread({
                           )}`}
                           title="Cambiar estado"
                         >
+                          <option value="RECOMMENDED">Recomendación</option>
                           <option value="PENDING">Lo veré</option>
                           <option value="WATCHING">Viendo</option>
                           <option value="COMPLETED">Terminado</option>
@@ -548,7 +639,8 @@ export default function AnimeThread({
                       onChange={(e) => setAdminStatus(e.target.value)}
                       className="field"
                     >
-                      <option value="PENDING">Lo veré (Pendiente)</option>
+                      <option value="RECOMMENDED">Recomendación</option>
+                      <option value="PENDING">Lo veré</option>
                       <option value="WATCHING">Viendo actualmente</option>
                       <option value="COMPLETED">Terminado</option>
                       <option value="DROPPED">Descartado</option>
@@ -617,9 +709,10 @@ export default function AnimeThread({
                   id={commentTextareaId}
                   required
                   rows={3}
+                  maxLength={COMMENT_MAX}
                   value={newCommentBody}
                   onChange={(e) => setNewCommentBody(e.target.value)}
-                  placeholder="Comparte qué te pareció este anime, tu escena favorita o por qué vale la pena verlo (¡sin spoilers!)..."
+                  placeholder="Comparte qué te pareció este anime, tu escena favorita o por qué vale la pena verlo, sin spoilers."
                   className="field resize-none"
                 />
               </div>
@@ -654,46 +747,68 @@ export default function AnimeThread({
                 </p>
               </div>
             ) : (
-              comments.map((comment) => {
-                const isCommentAuthor = comment.authorId === currentUser.id;
-                const canDelete = isAdmin || isCommentAuthor;
+              topLevelComments.map((comment) => {
+                const replies = repliesByParent.get(comment.id) ?? [];
 
                 return (
-                  <article
-                    key={comment.id}
-                    className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card"
-                  >
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-fg-muted mb-3 pb-2.5 border-b border-border">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-fg">
-                          {comment.author.name || comment.author.email}
-                        </span>
-                        {comment.author.role === "ADMIN" && (
-                          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/25">
-                            ADMIN
-                          </span>
+                  <div key={comment.id}>
+                    {renderComment(comment, false)}
+
+                    {(replies.length > 0 || replyingTo === comment.id) && (
+                      <div className="mt-3 ml-4 sm:ml-10 space-y-3 border-l-2 border-border pl-3 sm:pl-4">
+                        {replies.map((reply) => (
+                          <div key={reply.id}>{renderComment(reply, true)}</div>
+                        ))}
+
+                        {replyingTo === comment.id && (
+                          <form
+                            onSubmit={(e) => handleAddReply(e, comment.id)}
+                            className="rounded-2xl border border-border bg-surface p-4 shadow-card space-y-3"
+                          >
+                            <div className="form-field">
+                              <label htmlFor={`reply-${comment.id}`} className="form-label">
+                                Responder a {comment.author.name || comment.author.email}
+                              </label>
+                              <textarea
+                                id={`reply-${comment.id}`}
+                                required
+                                autoFocus
+                                rows={2}
+                                maxLength={COMMENT_MAX}
+                                value={replyBody}
+                                onChange={(e) => setReplyBody(e.target.value)}
+                                placeholder="Escribe tu respuesta..."
+                                className="field resize-none"
+                              />
+                            </div>
+
+                            {replyError && (
+                              <div role="alert" className="form-error">
+                                <span>{replyError}</span>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setReplyingTo(null)}
+                                className="btn btn-ghost text-sm"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={replySubmitting || !replyBody.trim()}
+                                className="btn btn-primary text-sm"
+                              >
+                                {replySubmitting ? "Enviando..." : "Enviar respuesta"}
+                              </button>
+                            </div>
+                          </form>
                         )}
-                        <span aria-hidden="true">•</span>
-                        <span>{new Date(comment.createdAt).toLocaleDateString("es-ES")}</span>
                       </div>
-
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteComment(comment.id)}
-                          title="Eliminar comentario"
-                          aria-label="Eliminar comentario"
-                          className="p-1.5 rounded-lg text-fg-subtle hover:text-danger hover:bg-danger-soft transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <p className="text-fg text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                      {comment.body}
-                    </p>
-                  </article>
+                    )}
+                  </div>
                 );
               })
             )}

@@ -15,7 +15,7 @@ export default function LoginPage() {
             OA
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
-            ✨ Comunidad de anime entre amigos
+            Comunidad de anime entre amigos
           </span>
         </div>
 

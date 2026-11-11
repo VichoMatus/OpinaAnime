@@ -56,7 +56,7 @@ export default async function AnimePage(props: AnimePageProps) {
     imageUrl: rec.imageUrl,
     rationale: rec.rationale,
     adminReview: rec.adminReview,
-    tier: rec.tier as "S" | "A" | "B" | "C" | null,
+    tier: rec.tier as "S" | "A" | "B" | "C" | "D" | "E" | null,
     status: rec.status,
     createdAt: rec.createdAt,
     authorId: rec.authorId,
@@ -71,6 +71,7 @@ export default async function AnimePage(props: AnimePageProps) {
       body: c.body,
       createdAt: c.createdAt,
       authorId: c.authorId,
+      parentId: c.parentId,
       author: {
         id: c.author.id,
         name: c.author.name,

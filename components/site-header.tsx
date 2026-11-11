@@ -106,7 +106,6 @@ export default function SiteHeader({ user, showBackToForum = false }: SiteHeader
               title="Actualizar catálogo de animes"
               aria-label="Actualizar catálogo de animes"
             >
-              <span aria-hidden="true">🔄</span>
               <span className="hidden md:inline">
                 {syncingCatalog ? "Actualizando..." : "Actualizar catálogo"}
               </span>

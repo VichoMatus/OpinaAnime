@@ -14,6 +14,7 @@ enum Role {
 }
 
 enum AnimeStatus {
+  RECOMMENDED
   PENDING
   WATCHING
   COMPLETED
@@ -50,7 +51,7 @@ model Recommendation {
   adminReview String?
   tier        Tier?
   tierOrder   Int          @default(0)
-  status      AnimeStatus  @default(PENDING)
+  status      AnimeStatus  @default(RECOMMENDED)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   authorId    String
@@ -68,10 +69,14 @@ model Comment {
   createdAt        DateTime       @default(now())
   authorId         String
   recommendationId String
+  parentId         String?
   author           User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  parent           Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          Comment[]      @relation("CommentReplies")
 
   @@index([recommendationId, createdAt])
+  @@index([parentId])
 }
 
 model Vote {

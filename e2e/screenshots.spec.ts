@@ -118,7 +118,7 @@ test.describe("capturas con sesión", () => {
 
     await page.emulateMedia({ colorScheme: "light" });
     await login(page);
-    await expect(page.getByText("Sousou no Frieren").first()).toBeVisible();
+    await expect(page.getByText("Shingeki no Kyojin").first()).toBeVisible();
     await shot(page, "home-light", { clipHeight: homeClipHeight });
 
     await page.emulateMedia({ colorScheme: "dark" });

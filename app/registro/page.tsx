@@ -14,7 +14,7 @@ export default function RegisterPage() {
             OA
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
-            ✨ Únete a nuestra comunidad
+            Únete a nuestra comunidad
           </span>
         </div>
 

@@ -8,6 +8,14 @@ import AnimeSearch, { CatalogAnime } from "@/components/anime-search";
 import TierList, { Tier } from "@/components/tier-list";
 import { getTierBadgeClass, getTierBadgeStyle } from "@/lib/tier-styles";
 import { MessageSquareIcon, TrashIcon, StarIcon, ThumbsUpIcon, SearchIcon } from "@/components/icons";
+import {
+  OWNER_NAME,
+  RATIONALE_MAX,
+  RATIONALE_MIN,
+  STATUS_LABELS,
+  getStatusBadgeClass,
+  validateRationale,
+} from "@/lib/community";
 
 export type Role = "ADMIN" | "USER";
 
@@ -48,34 +56,18 @@ interface DashboardProps {
   };
 }
 
-const statusLabels: Record<string, string> = {
-  PENDING: "Lo veré",
-  WATCHING: "Viendo actualmente",
-  COMPLETED: "Terminado",
-  DROPPED: "Descartado",
-};
+const statusLabels: Record<string, string> = STATUS_LABELS;
+
+const RECOMMENDED_FILTER = "RECOMMENDED";
 
 const filterTabs = [
-  { label: "Todos", value: "ALL" },
-  { label: "Terminados", value: "COMPLETED" },
-  { label: "Viendo", value: "WATCHING" },
+  { label: "Recomendaciones", value: RECOMMENDED_FILTER },
   { label: "Lo veré", value: "PENDING" },
+  { label: "Viendo", value: "WATCHING" },
+  { label: "Terminados", value: "COMPLETED" },
   { label: "Descartados", value: "DROPPED" },
+  { label: "Todos", value: "ALL" },
 ];
-
-function getStatusBadgeClass(status: string) {
-  switch (status) {
-    case "PENDING":
-      return "bg-warning-soft text-warning border-warning-border";
-    case "WATCHING":
-      return "bg-info-soft text-info border-info-border";
-    case "COMPLETED":
-      return "bg-success-soft text-success border-success-border";
-    case "DROPPED":
-    default:
-      return "bg-surface-subtle text-fg-muted border-border-strong";
-  }
-}
 
 export default function Dashboard({
   user,
@@ -89,7 +81,7 @@ export default function Dashboard({
 
   const [items, setItems] = useState<ForumRecommendation[]>(initialRecommendations);
   const [activeTab, setActiveTab] = useState<"foro" | "viendo" | "tierlist">("foro");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState(RECOMMENDED_FILTER);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"recientes" | "vistos" | "viendo" | "votados" | "comentados" | "tier">("votados");
 
@@ -204,7 +196,13 @@ export default function Dashboard({
 
   async function handleCreateRecommendation(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedAnime || !rationale.trim() || submitting) return;
+    if (!selectedAnime || submitting) return;
+
+    const rationaleError = validateRationale(rationale);
+    if (rationaleError) {
+      setFormError(rationaleError);
+      return;
+    }
 
     setSubmitting(true);
     setFormError("");
@@ -250,6 +248,7 @@ export default function Dashboard({
       };
 
       setItems([newItem, ...items]);
+      setStatusFilter(RECOMMENDED_FILTER);
       handleResetSelection();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Ocurrió un error al publicar.");
@@ -304,27 +303,30 @@ export default function Dashboard({
     );
   }
 
+  // En "Recomendaciones" siempre se ordena por me gusta.
+  const effectiveSort = statusFilter === RECOMMENDED_FILTER ? "votados" : sortBy;
+
   processedItems.sort((a, b) => {
-    if (sortBy === "vistos") {
+    if (effectiveSort === "vistos") {
       const aComp = a.status === "COMPLETED" ? 1 : 0;
       const bComp = b.status === "COMPLETED" ? 1 : 0;
       if (bComp !== aComp) return bComp - aComp;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-    if (sortBy === "viendo") {
+    if (effectiveSort === "viendo") {
       const aWatch = a.status === "WATCHING" ? 1 : 0;
       const bWatch = b.status === "WATCHING" ? 1 : 0;
       if (bWatch !== aWatch) return bWatch - aWatch;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-    if (sortBy === "votados") {
+    if (effectiveSort === "votados") {
       if (b.votesCount !== a.votesCount) return b.votesCount - a.votesCount;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-    if (sortBy === "comentados") {
+    if (effectiveSort === "comentados") {
       return b.commentsCount - a.commentsCount;
     }
-    if (sortBy === "tier") {
+    if (effectiveSort === "tier") {
       const tierRank: Record<string, number> = { S: 1, A: 2, B: 3, C: 4, D: 5, E: 6 };
       const aRank = a.tier ? tierRank[a.tier] ?? 99 : 99;
       const bRank = b.tier ? tierRank[b.tier] ?? 99 : 99;
@@ -347,23 +349,24 @@ export default function Dashboard({
         <section className="mb-8 rounded-2xl border border-border bg-surface p-5 sm:p-7 shadow-card">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
-                ✨ Rincón de recomendaciones y opiniones
-              </span>
-              <h1 className="mt-2.5 text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
-                ¿Qué anime vamos a ver después?
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
+                {isAdmin
+                  ? "¿Qué anime vas a ver después?"
+                  : `Recomiéndale algo a ${OWNER_NAME} y únete al debate`}
               </h1>
               <p className="mt-1 text-sm sm:text-base text-fg-muted max-w-2xl">
-                Descubre las series que recomiendan tus amigos, vota por las que más te llamen la atención y comparte tu opinión sin spoilers.
+                {isAdmin
+                  ? "Revisa lo que te recomienda la comunidad, ordenado por los que tienen más me gusta."
+                  : "Busca un anime, cuéntale por qué vale la pena verlo y dale me gusta a las recomendaciones que más te convenzan."}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
               <div className="rounded-xl border border-border bg-surface-subtle px-3.5 py-2 text-center">
                 <span className="block font-display text-lg font-extrabold text-fg">
-                  {items.length}
+                  {items.filter((i) => i.status === RECOMMENDED_FILTER).length}
                 </span>
-                <span className="text-xs font-medium text-fg-muted">Recomendados</span>
+                <span className="text-xs font-medium text-fg-muted">Recomendaciones</span>
               </div>
               <div className="rounded-xl border border-border bg-surface-subtle px-3.5 py-2 text-center">
                 <span className="block font-display text-lg font-extrabold text-info">
@@ -388,10 +391,10 @@ export default function Dashboard({
             <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-elevated">
               <div className="mb-4">
                 <h2 className="text-lg font-extrabold text-fg tracking-tight">
-                  Recomendar un anime
+                  {isAdmin ? "Agregar un anime" : `Recomiéndale un anime a ${OWNER_NAME}`}
                 </h2>
                 <p className="mt-1 text-sm text-fg-muted leading-relaxed">
-                  Busca cualquier serie en el catálogo. Revisaremos que no esté repetida antes de crear el hilo.
+                  Busca cualquier serie en el catálogo. Revisaremos que no esté repetida antes de publicarla.
                 </p>
               </div>
 
@@ -430,12 +433,25 @@ export default function Dashboard({
                     <textarea
                       id={rationaleId}
                       required
-                      rows={4}
+                      rows={5}
+                      minLength={RATIONALE_MIN}
+                      maxLength={RATIONALE_MAX}
                       value={rationale}
                       onChange={(e) => setRationale(e.target.value)}
-                      placeholder="Cuéntanos qué lo hace especial, su ambiente o por qué engancha (¡sin spoilers!)..."
+                      aria-describedby={`${rationaleId}-count`}
+                      placeholder="Cuéntanos qué lo hace especial, su ambiente o por qué engancha, sin spoilers."
                       className="field resize-none"
                     />
+                    <p
+                      id={`${rationaleId}-count`}
+                      className={`text-xs ${
+                        rationale.trim().length >= RATIONALE_MIN ? "text-success" : "text-fg-subtle"
+                      }`}
+                    >
+                      {rationale.trim().length >= RATIONALE_MIN
+                        ? `${rationale.trim().length} caracteres. ¡Listo para publicar!`
+                        : `Mínimo ${RATIONALE_MIN} caracteres (llevas ${rationale.trim().length}).`}
+                    </p>
                   </div>
 
                   {formError && (
@@ -582,12 +598,18 @@ export default function Dashboard({
                           onClick={() => setSearchQuery("")}
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs font-semibold text-fg-muted hover:text-fg hover:bg-surface-subtle"
                           title="Limpiar búsqueda"
+                          aria-label="Limpiar búsqueda"
                         >
-                          ✕
+                          Limpiar
                         </button>
                       )}
                     </div>
 
+                    {statusFilter === RECOMMENDED_FILTER ? (
+                      <p className="text-xs sm:text-sm font-semibold text-fg-muted sm:shrink-0">
+                        Ordenadas por más me gusta
+                      </p>
+                    ) : (
                     <div className="flex items-center gap-2 min-w-0 sm:shrink-0">
                       <label
                         htmlFor={sortSelectId}
@@ -609,12 +631,13 @@ export default function Dashboard({
                         <option value="tier">Mejor Tier (S → E)</option>
                       </select>
                     </div>
+                    )}
                   </div>
 
                   {/* Fila 2: Chips de Estado */}
                   <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
                     <span className="text-xs font-semibold text-fg-muted mr-1">
-                      Estado:
+                      Categoría:
                     </span>
                     {filterTabs.map((tab) => {
                       const count =
@@ -657,14 +680,18 @@ export default function Dashboard({
                       <p className="text-base font-bold text-fg">
                         {searchQuery
                           ? `No encontramos ningún anime que coincida con "${searchQuery}".`
-                          : "Aún no hay recomendaciones en esta categoría."}
+                          : statusFilter === RECOMMENDED_FILTER
+                            ? "Aún no hay recomendaciones nuevas."
+                            : "Aún no hay animes en esta categoría."}
                       </p>
                       <p className="mt-1.5 text-sm text-fg-muted">
                         {searchQuery
                           ? "Prueba buscando con otras palabras o limpia el filtro para ver todas las recomendaciones."
-                          : "¡Sé el primero en compartir un anime usando el buscador lateral!"}
+                          : statusFilter === RECOMMENDED_FILTER && !isAdmin
+                            ? `¡Sé el primero en recomendarle algo a ${OWNER_NAME} con el buscador!`
+                            : "Cuando haya animes aquí, los verás en esta lista."}
                       </p>
-                      {(searchQuery || statusFilter !== "ALL") && (
+                      {(searchQuery || statusFilter !== "ALL") && items.length > 0 && (
                         <button
                           type="button"
                           onClick={() => {
@@ -768,6 +795,7 @@ export default function Dashboard({
                                           )}`}
                                           title="Cambiar estado"
                                         >
+                                          <option value="RECOMMENDED">Recomendación</option>
                                           <option value="PENDING">Lo veré</option>
                                           <option value="WATCHING">Viendo</option>
                                           <option value="COMPLETED">Terminado</option>

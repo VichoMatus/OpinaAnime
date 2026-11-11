@@ -2,6 +2,7 @@ import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { STATUSES, type AnimeStatus } from "@/lib/community";
 
 const ADMIN_EMAILS = [
   process.env.ADMIN_EMAIL?.trim().toLowerCase(),
@@ -30,7 +31,7 @@ export async function PATCH(
   const body = await request.json();
 
   const validTiers = ["S", "A", "B", "C", "D", "E", null];
-  const validStatuses = ["PENDING", "WATCHING", "COMPLETED", "DROPPED"];
+  const validStatuses: readonly string[] = STATUSES;
 
   // Si envían string vacío para tier, convertirlo a null
   const rawTier =
@@ -72,7 +73,7 @@ export async function PATCH(
 
   const updateData: {
     tier?: "S" | "A" | "B" | "C" | "D" | "E" | null;
-    status?: "PENDING" | "WATCHING" | "COMPLETED" | "DROPPED";
+    status?: AnimeStatus;
     adminReview?: string | null;
   } = {};
 
