@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { signOut } from "next-auth/react";
-import Link from "next/link";
+import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, ExternalLinkIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
+import SiteHeader from "@/components/site-header";
+import SiteFooter from "@/components/site-footer";
+import { ExternalLinkIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
 
@@ -66,34 +66,30 @@ const statusLabels: Record<string, string> = {
 function getTierBadgeClass(tier: string | null) {
   switch (tier) {
     case "S":
-      return "bg-red-500/10 text-red-300 border-red-500/30";
     case "A":
-      return "bg-orange-500/10 text-orange-300 border-orange-500/30";
+      return "bg-danger-soft text-danger border-danger-border";
     case "B":
-      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
     case "C":
-      return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+      return "bg-warning-soft text-warning border-warning-border";
     case "D":
-      return "bg-green-500/10 text-green-300 border-green-500/30";
     case "E":
-      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+      return "bg-success-soft text-success border-success-border";
     default:
-      return "bg-zinc-800 text-zinc-400 border-zinc-700";
+      return "bg-surface-subtle text-fg-muted border-border-strong";
   }
 }
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "PENDING":
-      return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+      return "bg-warning-soft text-warning border-warning-border";
     case "WATCHING":
-      return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
+      return "bg-info-soft text-info border-info-border";
     case "COMPLETED":
-      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+      return "bg-success-soft text-success border-success-border";
     case "DROPPED":
-      return "bg-zinc-800 text-zinc-400 border-zinc-700";
     default:
-      return "bg-zinc-800 text-zinc-400 border-zinc-700";
+      return "bg-surface-subtle text-fg-muted border-border-strong";
   }
 }
 
@@ -103,30 +99,33 @@ export default function AnimeThread({
   notice,
 }: AnimeThreadProps) {
   const router = useRouter();
+  const commentTextareaId = useId();
+  const adminTierId = useId();
+  const adminStatusId = useId();
+  const adminReviewId = useId();
+
   const [item, setItem] = useState<RecommendationDetail>(initialData);
   const [comments, setComments] = useState<CommentItem[]>(initialData.comments);
   const [newCommentBody, setNewCommentBody] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState("");
 
   const [adminTier, setAdminTier] = useState<string>(initialData.tier ?? "");
   const [adminStatus, setAdminStatus] = useState<string>(initialData.status);
   const [adminReviewText, setAdminReviewText] = useState<string>(initialData.adminReview ?? "");
   const [adminSaving, setAdminSaving] = useState(false);
-  const [adminMessage, setAdminMessage] = useState("");
+  const [adminMessage, setAdminMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [threadError, setThreadError] = useState("");
 
   const isAdmin = currentUser.role === "ADMIN";
   const isAuthor = item.authorId === currentUser.id;
   const canDeleteRecommendation = isAdmin || (isAuthor && comments.length === 0);
 
-  async function handleSignOut() {
-    await signOut({ redirect: false });
-    window.location.href = "/login";
-  }
-
   // Actualización rápida directa de Tier o Estado
   async function handleQuickUpdate(updates: { tier?: "S" | "A" | "B" | "C" | "D" | "E" | null; status?: string }) {
     const prevTier = item.tier;
     const prevStatus = item.status;
+    setThreadError("");
 
     setItem((prev) => ({ ...prev, ...updates }));
     if (updates.tier !== undefined) setAdminTier(updates.tier ?? "");
@@ -141,11 +140,11 @@ export default function AnimeThread({
 
       if (!res.ok) {
         const errorData = await res.json();
-        alert(errorData.error || "No se pudo actualizar.");
+        setThreadError(errorData.error || "No se pudo actualizar el estado del anime.");
         setItem((prev) => ({ ...prev, tier: prevTier, status: prevStatus }));
       }
     } catch {
-      alert("Error de red al actualizar.");
+      setThreadError("Error de conexión al actualizar el anime.");
       setItem((prev) => ({ ...prev, tier: prevTier, status: prevStatus }));
     }
   }
@@ -194,7 +193,7 @@ export default function AnimeThread({
   async function handleAdminSave(e: React.FormEvent) {
     e.preventDefault();
     setAdminSaving(true);
-    setAdminMessage("");
+    setAdminMessage(null);
 
     try {
       const res = await fetch(`/api/recommendations/${item.id}`, {
@@ -209,7 +208,7 @@ export default function AnimeThread({
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Error al actualizar.");
+        throw new Error(errorData.error || "No se pudo guardar el veredicto.");
       }
 
       const updated = await res.json();
@@ -219,10 +218,16 @@ export default function AnimeThread({
         status: updated.status,
         adminReview: updated.adminReview,
       }));
-      setAdminMessage("Veredicto, tier y categoría guardados correctamente.");
-      setTimeout(() => setAdminMessage(""), 4000);
+      setAdminMessage({
+        text: "Veredicto, tier y estado guardados correctamente.",
+        type: "success",
+      });
+      setTimeout(() => setAdminMessage(null), 4000);
     } catch (err: unknown) {
-      setAdminMessage(err instanceof Error ? err.message : "Error al guardar.");
+      setAdminMessage({
+        text: err instanceof Error ? err.message : "Error al guardar los cambios.",
+        type: "error",
+      });
     } finally {
       setAdminSaving(false);
     }
@@ -234,6 +239,7 @@ export default function AnimeThread({
       : "¿Estás seguro de que deseas eliminar tu recomendación?";
 
     if (!window.confirm(confirmText)) return;
+    setThreadError("");
 
     try {
       const res = await fetch(`/api/recommendations/${item.id}`, {
@@ -242,14 +248,14 @@ export default function AnimeThread({
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "No se pudo eliminar la recomendación.");
+        setThreadError(data.error || "No se pudo eliminar la recomendación.");
         return;
       }
 
       router.push("/");
       router.refresh();
     } catch {
-      alert("Error al procesar la eliminación.");
+      setThreadError("Error de conexión al intentar eliminar la recomendación.");
     }
   }
 
@@ -258,6 +264,7 @@ export default function AnimeThread({
     if (!newCommentBody.trim() || commentSubmitting) return;
 
     setCommentSubmitting(true);
+    setCommentError("");
     try {
       const res = await fetch(`/api/recommendations/${item.id}/comments`, {
         method: "POST",
@@ -271,10 +278,10 @@ export default function AnimeThread({
         setNewCommentBody("");
       } else {
         const err = await res.json();
-        alert(err.error || "Error al publicar comentario.");
+        setCommentError(err.error || "No pudimos publicar tu comentario.");
       }
     } catch {
-      alert("Error de red al comentar.");
+      setCommentError("Error de conexión al publicar tu comentario.");
     } finally {
       setCommentSubmitting(false);
     }
@@ -282,6 +289,7 @@ export default function AnimeThread({
 
   async function handleDeleteComment(commentId: string) {
     if (!window.confirm("¿Seguro que deseas eliminar este comentario?")) return;
+    setCommentError("");
 
     try {
       const res = await fetch(`/api/comments/${commentId}`, {
@@ -292,73 +300,56 @@ export default function AnimeThread({
         setComments((prev) => prev.filter((c) => c.id !== commentId));
       } else {
         const err = await res.json();
-        alert(err.error || "No se pudo eliminar el comentario.");
+        setCommentError(err.error || "No se pudo eliminar el comentario.");
       }
     } catch {
-      alert("Error de red al eliminar el comentario.");
+      setCommentError("Error de conexión al eliminar el comentario.");
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0b0e] text-zinc-100 pb-20">
-      {/* Top Navbar */}
-      <header className="border-b border-[#1f2128] bg-[#0e0f14] sticky top-0 z-20">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeftIcon className="w-4 h-4" />
-            <span>Volver al Foro</span>
-          </Link>
+    <div className="min-h-screen bg-bg text-fg flex flex-col">
+      {/* Header compartido con botón Volver al foro */}
+      <SiteHeader user={currentUser} showBackToForum />
 
-          <Link href="/" className="cursor-pointer">
-            <span className="text-lg font-bold tracking-wider text-white uppercase">
-              OPINANIME
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-3 font-sans text-xs">
-            <span className="text-zinc-400">{currentUser.name || currentUser.email}</span>
-            {isAdmin && (
-              <span className="rounded bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/30">
-                ADMIN
-              </span>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {notice === "already_exists" && (
-          <div className="mb-6 rounded-lg bg-blue-950/30 border border-blue-500/40 p-4 text-blue-200 text-sm font-sans flex items-center justify-between">
+          <div role="status" className="form-notice mb-6 flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-semibold text-white">
-                Este anime ya está registrado en el foro.
+              <p className="font-bold text-fg">
+                ¡Este anime ya estaba en la comunidad!
               </p>
-              <p className="text-xs text-blue-300 mt-0.5">
-                Te hemos redirigido a su hilo para debatir y votar.
+              <p className="text-xs sm:text-sm text-fg-muted mt-0.5">
+                Te trajimos directamente a su hilo para que puedas votar o dejar tu opinión.
               </p>
             </div>
           </div>
         )}
 
+        {threadError && (
+          <div role="alert" className="form-error mb-6 justify-between">
+            <span>{threadError}</span>
+            <button
+              type="button"
+              onClick={() => setThreadError("")}
+              className="text-xs font-semibold underline"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Ficha Principal del Anime */}
-        <article className="rounded-xl border border-[#22242a] bg-[#121318] overflow-hidden shadow-sm">
-          <div className="p-6 sm:p-8 grid gap-8 md:grid-cols-[220px_1fr]">
-            {/* Poster */}
-            <div className="space-y-3">
-              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+        <article className="rounded-2xl border border-border bg-surface overflow-hidden shadow-elevated">
+          <div className="p-5 sm:p-8 grid gap-6 sm:gap-8 md:grid-cols-[230px_1fr]">
+            {/* Portada y Link externo */}
+            <div className="space-y-3 max-w-[240px] mx-auto w-full md:max-w-none">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface-subtle shadow-card aspect-[3/4]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.imageUrl}
                   alt={item.title}
-                  className="w-full h-72 md:h-80 object-cover"
+                  className="w-full h-full object-cover"
                 />
               </div>
 
@@ -367,121 +358,105 @@ export default function AnimeThread({
                   href={`https://myanimelist.net/anime/${item.mal_id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-md bg-[#181920] border border-zinc-700 text-xs font-sans text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+                  className="btn btn-secondary w-full text-xs sm:text-sm"
                 >
                   <span>Ver en MyAnimeList</span>
-                  <ExternalLinkIcon className="w-3.5 h-3.5" />
+                  <ExternalLinkIcon className="w-4 h-4" />
                 </a>
               )}
             </div>
 
             {/* Información y Fundamento */}
-            <div className="flex flex-col justify-between">
+            <div className="flex flex-col justify-between min-w-0">
               <div>
-                {/* Cabecera */}
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1f2128] pb-5">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{item.title}</h1>
-                    <p className="mt-1 font-sans text-xs text-zinc-400">
+                {/* Cabecera del Anime */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3.5 border-b border-border pb-5">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
+                      {item.title}
+                    </h1>
+                    <p className="mt-1.5 text-xs sm:text-sm text-fg-muted">
                       Recomendado por{" "}
-                      <span className="text-zinc-200">
+                      <span className="font-semibold text-fg">
                         {item.author.name || item.author.email}
                       </span>{" "}
                       el {new Date(item.createdAt).toLocaleDateString("es-ES")}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 font-sans text-xs">
-                    {/* Botón de Like / Upvote interactivo */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {/* Botón de Voto / Me gusta */}
                     <button
                       type="button"
                       onClick={handleToggleVote}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold border transition-colors cursor-pointer ${
+                      className={`btn min-h-9 px-3.5 py-1.5 text-xs sm:text-sm ${
                         item.hasVoted
-                          ? "bg-rose-600 text-white border-rose-500"
-                          : "bg-[#181920] border-[#2a2c35] text-zinc-300 hover:text-white hover:border-zinc-500"
+                          ? "btn-primary"
+                          : "btn-secondary"
                       }`}
-                      title={item.hasVoted ? "Quitar me gusta" : "Apoyar esta recomendación"}
+                      title={item.hasVoted ? "Quitar mi voto" : "Apoyar esta recomendación"}
                     >
                       <ThumbsUpIcon className="w-4 h-4" filled={item.hasVoted} />
-                      <span>{item.votesCount}</span>
+                      <span>
+                        {item.votesCount} {item.votesCount === 1 ? "voto" : "votos"}
+                      </span>
                     </button>
 
-                    {/* Controles interactivos para Admin */}
+                    {/* Controles rápidos para Admin o Badges para usuarios */}
                     {isAdmin ? (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <select
+                          aria-label="Cambiar Tier (Admin)"
                           value={item.tier ?? ""}
                           onChange={(e) =>
                             handleQuickUpdate({
                               tier: (e.target.value as "S" | "A" | "B" | "C" | "D" | "E") || null,
                             })
                           }
-                          className={`px-2 py-1 rounded-md font-semibold text-xs border cursor-pointer ${getTierBadgeClass(
+                          className={`px-2.5 py-1.5 rounded-lg font-bold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getTierBadgeClass(
                             item.tier
-                          )} bg-[#121318] focus:outline-none`}
+                          )}`}
                           title="Cambiar Tier (Admin)"
                         >
-                          <option value="" className="bg-[#121318] text-zinc-400">
-                            Sin tier
-                          </option>
-                          <option value="S" className="bg-[#121318] text-amber-300">
-                            Tier S
-                          </option>
-                          <option value="A" className="bg-[#121318] text-blue-300">
-                            Tier A
-                          </option>
-                          <option value="B" className="bg-[#121318] text-cyan-300">
-                            Tier B
-                          </option>
-                          <option value="C" className="bg-[#121318] text-yellow-300">
-                            Tier C
-                          </option>
-                          <option value="D" className="bg-[#121318] text-green-300">
-                            Tier D
-                          </option>
-                          <option value="E" className="bg-[#121318] text-emerald-300">
-                            Tier E
-                          </option>
+                          <option value="">Sin tier</option>
+                          <option value="S">Tier S</option>
+                          <option value="A">Tier A</option>
+                          <option value="B">Tier B</option>
+                          <option value="C">Tier C</option>
+                          <option value="D">Tier D</option>
+                          <option value="E">Tier E</option>
                         </select>
 
                         <select
+                          aria-label="Cambiar estado (Admin)"
                           value={item.status}
                           onChange={(e) =>
                             handleQuickUpdate({
                               status: e.target.value,
                             })
                           }
-                          className={`px-2 py-1 rounded-md font-medium text-xs border cursor-pointer ${getStatusBadgeClass(
+                          className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getStatusBadgeClass(
                             item.status
-                          )} bg-[#121318] focus:outline-none`}
-                          title="Mover categoría / estado (Admin)"
+                          )}`}
+                          title="Cambiar estado (Admin)"
                         >
-                          <option value="PENDING" className="bg-[#121318] text-amber-300">
-                            Lo veré
-                          </option>
-                          <option value="WATCHING" className="bg-[#121318] text-cyan-300">
-                            Viendo
-                          </option>
-                          <option value="COMPLETED" className="bg-[#121318] text-emerald-300">
-                            Terminado
-                          </option>
-                          <option value="DROPPED" className="bg-[#121318] text-zinc-400">
-                            Descartado
-                          </option>
+                          <option value="PENDING">Lo veré</option>
+                          <option value="WATCHING">Viendo</option>
+                          <option value="COMPLETED">Terminado</option>
+                          <option value="DROPPED">Descartado</option>
                         </select>
                       </div>
                     ) : (
                       <>
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-md font-semibold border ${getTierBadgeClass(
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${getTierBadgeClass(
                             item.tier
                           )}`}
                         >
                           {item.tier ? `Tier ${item.tier}` : "Sin tier"}
                         </span>
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-md font-medium border ${getStatusBadgeClass(
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border ${getStatusBadgeClass(
                             item.status
                           )}`}
                         >
@@ -490,12 +465,14 @@ export default function AnimeThread({
                       </>
                     )}
 
-                    {/* Botón de Moderación para borrar */}
+                    {/* Botón para borrar recomendación */}
                     {canDeleteRecommendation && (
                       <button
+                        type="button"
                         onClick={handleDeleteRecommendation}
                         title="Eliminar recomendación"
-                        className="ml-1 p-1.5 rounded-md border border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:border-rose-600 transition-colors cursor-pointer"
+                        aria-label="Eliminar recomendación"
+                        className="btn btn-danger min-h-9 px-2.5 py-1.5 text-xs"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -505,11 +482,11 @@ export default function AnimeThread({
 
                 {/* Fundamento original del usuario */}
                 <div className="mt-6">
-                  <h3 className="font-sans text-xs uppercase tracking-widest text-zinc-400 font-bold mb-2">
-                    Fundamento de la Recomendación
-                  </h3>
-                  <div className="rounded-lg bg-[#0a0b0e] border border-[#22242a] p-4">
-                    <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
+                  <h2 className="text-xs uppercase tracking-wider text-fg-muted font-bold mb-2.5">
+                    ¿Por qué lo recomienda {item.author.name || "este miembro"}?
+                  </h2>
+                  <div className="rounded-xl bg-surface-subtle border border-border p-4 sm:p-5">
+                    <p className="text-fg text-base leading-relaxed whitespace-pre-wrap">
                       {item.rationale}
                     </p>
                   </div>
@@ -520,15 +497,17 @@ export default function AnimeThread({
 
           {/* Reseña Final del Administrador */}
           {item.adminReview && (
-            <div className="border-t border-[#1f2128] bg-[#0e0f14] p-6 sm:p-8">
-              <div className="flex items-center gap-2 mb-3">
-                <StarIcon className="w-5 h-5 text-amber-400" />
-                <h3 className="font-sans text-sm uppercase tracking-wider font-bold text-amber-300">
-                  Reseña Final del Administrador
-                </h3>
+            <div className="border-t border-border bg-warning-soft/50 p-5 sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <StarIcon className="w-5 h-5 text-warning" />
+                  <h2 className="text-sm sm:text-base font-extrabold text-fg">
+                    Reseña Final del Administrador
+                  </h2>
+                </div>
                 {item.tier && (
                   <span
-                    className={`ml-auto font-sans text-xs px-2.5 py-0.5 rounded border font-semibold ${getTierBadgeClass(
+                    className={`text-xs px-3 py-1 rounded-full border font-bold ${getTierBadgeClass(
                       item.tier
                     )}`}
                   >
@@ -536,48 +515,50 @@ export default function AnimeThread({
                   </span>
                 )}
               </div>
-              <p className="text-zinc-200 text-base leading-relaxed italic bg-[#121318] p-5 rounded-lg border border-[#22242a]">
+              <blockquote className="text-fg text-base leading-relaxed italic bg-surface p-4 sm:p-5 rounded-xl border border-warning-border shadow-card">
                 &quot;{item.adminReview}&quot;
-              </p>
+              </blockquote>
             </div>
           )}
 
           {/* Panel de Moderación y Veredicto exclusivo de Admin */}
           {isAdmin && (
-            <div className="border-t border-[#1f2128] bg-[#101116] p-6 sm:p-8 font-sans">
-              <h3 className="text-sm uppercase tracking-wider font-bold text-zinc-300 mb-4">
-                Panel de Veredicto (Admin)
-              </h3>
+            <div className="border-t border-border bg-surface-subtle/60 p-5 sm:p-8">
+              <h2 className="text-base font-extrabold text-fg mb-4">
+                Panel de Veredicto y Moderación (Admin)
+              </h2>
 
-              <form onSubmit={handleAdminSave} className="space-y-4">
+              <form onSubmit={handleAdminSave} className="form-stack">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
-                      Asignar Tier:
+                  <div className="form-field">
+                    <label htmlFor={adminTierId} className="form-label">
+                      Asignar Tier
                     </label>
                     <select
+                      id={adminTierId}
                       value={adminTier}
                       onChange={(e) => setAdminTier(e.target.value)}
-                      className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-500"
+                      className="field"
                     >
                       <option value="">Sin tier asignado</option>
-                      <option value="S">Tier S (Obra Maestra)</option>
+                      <option value="S">Tier S (Obra maestra)</option>
                       <option value="A">Tier A (Excelente)</option>
-                      <option value="B">Tier B (Bueno / Recomendable)</option>
-                      <option value="C">Tier C (Regular / Pasable)</option>
-                      <option value="D">Tier D (Mediocre)</option>
-                      <option value="E">Tier E (Malo)</option>
+                      <option value="B">Tier B (Muy bueno / Recomendable)</option>
+                      <option value="C">Tier C (Entretenido / Cumple)</option>
+                      <option value="D">Tier D (Regular)</option>
+                      <option value="E">Tier E (Flojo)</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
-                      Estado de Visualización:
+                  <div className="form-field">
+                    <label htmlFor={adminStatusId} className="form-label">
+                      Estado de visualización
                     </label>
                     <select
+                      id={adminStatusId}
                       value={adminStatus}
                       onChange={(e) => setAdminStatus(e.target.value)}
-                      className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-500"
+                      className="field"
                     >
                       <option value="PENDING">Lo veré (Pendiente)</option>
                       <option value="WATCHING">Viendo actualmente</option>
@@ -587,68 +568,87 @@ export default function AnimeThread({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase">
-                    Reseña Final del Administrador:
+                <div className="form-field">
+                  <label htmlFor={adminReviewId} className="form-label">
+                    Reseña final del Administrador
                   </label>
                   <textarea
+                    id={adminReviewId}
                     rows={3}
                     required={adminStatus === "COMPLETED"}
                     value={adminReviewText}
                     onChange={(e) => setAdminReviewText(e.target.value)}
                     placeholder={
                       adminStatus === "COMPLETED"
-                        ? "Debes escribir tu opinión final antes de marcar el anime como Terminado (Obligatorio)..."
-                        : "Escribe tu análisis final, opinión y conclusión al terminar el anime..."
+                        ? "Escribe tu conclusión antes de marcar el anime como Terminado (obligatorio)..."
+                        : "Comparte tu análisis final y conclusión sobre la serie..."
                     }
-                    className="w-full bg-[#0a0b0e] border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 focus:outline-none focus:border-blue-500 resize-none"
+                    className="field resize-none"
                   />
                 </div>
 
                 {adminMessage && (
-                  <p className="text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-lg">
-                    {adminMessage}
-                  </p>
+                  <div
+                    role={adminMessage.type === "error" ? "alert" : "status"}
+                    className={adminMessage.type === "error" ? "form-error" : "form-notice"}
+                  >
+                    <span>{adminMessage.text}</span>
+                  </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={adminSaving}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs py-2 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {adminSaving ? "Guardando veredicto..." : "Guardar Cambios de Admin"}
-                </button>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={adminSaving}
+                    className="btn btn-primary"
+                  >
+                    {adminSaving ? "Guardando veredicto..." : "Guardar cambios de Admin"}
+                  </button>
+                </div>
               </form>
             </div>
           )}
         </article>
 
-        {/* Sección de Debate / Comentarios */}
-        <section className="mt-10 font-sans">
-          <div className="flex items-center justify-between border-b border-[#1f2128] pb-3 mb-6">
-            <h2 className="text-xl font-bold text-white tracking-tight">
+        {/* Sección de Debate / Opiniones */}
+        <section className="mt-10">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-6">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-fg tracking-tight">
               Hilos de Debate ({comments.length})
             </h2>
           </div>
 
           {/* Formulario de nuevo comentario */}
           <form onSubmit={handleAddComment} className="mb-8">
-            <div className="bg-[#121318] border border-[#22242a] rounded-xl p-4 shadow-sm">
-              <textarea
-                required
-                rows={3}
-                value={newCommentBody}
-                onChange={(e) => setNewCommentBody(e.target.value)}
-                placeholder="Comparte tu opinión sin spoilers..."
-                className="w-full bg-[#0a0b0e] border border-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
-              />
-              <div className="mt-3 flex justify-end">
+            <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-card space-y-3">
+              <div className="form-field">
+                <label htmlFor={commentTextareaId} className="form-label">
+                  Suma tu opinión a la conversación
+                </label>
+                <textarea
+                  id={commentTextareaId}
+                  required
+                  rows={3}
+                  value={newCommentBody}
+                  onChange={(e) => setNewCommentBody(e.target.value)}
+                  placeholder="Comparte qué te pareció este anime, tu escena favorita o por qué vale la pena verlo (¡sin spoilers!)..."
+                  className="field resize-none"
+                />
+              </div>
+
+              {commentError && (
+                <div role="alert" className="form-error">
+                  <span>{commentError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={commentSubmitting || !newCommentBody.trim()}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs py-2 px-5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  className="btn btn-primary"
                 >
-                  {commentSubmitting ? "Comentando..." : "Publicar Comentario"}
+                  {commentSubmitting ? "Publicando..." : "Publicar Comentario"}
                 </button>
               </div>
             </div>
@@ -657,8 +657,13 @@ export default function AnimeThread({
           {/* Lista de comentarios */}
           <div className="space-y-4">
             {comments.length === 0 ? (
-              <div className="rounded-xl border border-[#22242a] bg-[#121318] p-8 text-center text-zinc-400 text-sm">
-                Aún no hay comentarios en este debate. ¡Sé el primero en opinar!
+              <div className="rounded-2xl border border-border bg-surface p-8 sm:p-10 text-center shadow-card">
+                <p className="text-base font-bold text-fg">
+                  Aún no hay opiniones, ¡sé el primero!
+                </p>
+                <p className="mt-1 text-sm text-fg-muted">
+                  Aún no hay comentarios en este debate. ¡Comparte qué te pareció arriba!
+                </p>
               </div>
             ) : (
               comments.map((comment) => {
@@ -666,45 +671,50 @@ export default function AnimeThread({
                 const canDelete = isAdmin || isCommentAuthor;
 
                 return (
-                  <div
+                  <article
                     key={comment.id}
-                    className="rounded-xl border border-[#22242a] bg-[#121318] p-4"
+                    className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card"
                   >
-                    <div className="flex items-center justify-between text-xs text-zinc-400 mb-2 pb-2 border-b border-[#1f2128]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-200">
+                    <div className="flex items-center justify-between text-xs sm:text-sm text-fg-muted mb-3 pb-2.5 border-b border-border">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-fg">
                           {comment.author.name || comment.author.email}
                         </span>
                         {comment.author.role === "ADMIN" && (
-                          <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/30">
+                          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/25">
                             ADMIN
                           </span>
                         )}
-                        <span>•</span>
+                        <span aria-hidden="true">•</span>
                         <span>{new Date(comment.createdAt).toLocaleDateString("es-ES")}</span>
                       </div>
 
                       {canDelete && (
                         <button
+                          type="button"
                           onClick={() => handleDeleteComment(comment.id)}
                           title="Eliminar comentario"
-                          className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                          aria-label="Eliminar comentario"
+                          className="p-1.5 rounded-lg text-fg-subtle hover:text-danger hover:bg-danger-soft transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
                         >
-                          <TrashIcon className="w-3.5 h-3.5" />
+                          <TrashIcon className="w-4 h-4" />
                         </button>
                       )}
                     </div>
 
-                    <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
+                    <p className="text-fg text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                       {comment.body}
                     </p>
-                  </div>
+                  </article>
                 );
               })
             )}
           </div>
         </section>
       </main>
+
+      {/* Footer compartido */}
+      <SiteFooter />
     </div>
   );
 }
