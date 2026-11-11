@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { compare } from "bcrypt";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 const ADMIN_EMAILS = [
   process.env.ADMIN_EMAIL?.trim().toLowerCase(),
@@ -44,21 +45,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) {
-        return url;
-      }
-      if (url.includes("localhost") && process.env.NODE_ENV === "production") {
-        return "/login";
-      }
-      try {
-        const parsedUrl = new URL(url);
-        if (parsedUrl.origin === baseUrl || parsedUrl.hostname.endsWith(".vercel.app")) {
-          return url;
-        }
-      } catch {
-        // En caso de url inválida
-      }
-      return "/login";
+      return safeRedirect(url, baseUrl);
     },
   },
   pages: {

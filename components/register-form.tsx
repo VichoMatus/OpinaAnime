@@ -1,19 +1,68 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import PasswordInput from "@/components/password-input";
 
 export default function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError("");
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    const response = await fetch("/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    const result = await response.json();
-    if (!response.ok) { setError(result.error); setBusy(false); return; }
-    router.push("/login?registered=1");
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const name = String(data.get("name") ?? "");
+    const email = String(data.get("email") ?? "");
+    const password = String(data.get("password") ?? "");
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error ?? "No se pudo crear la cuenta.");
+        (form.elements.namedItem("password") as HTMLInputElement).value = "";
+        setBusy(false);
+        return;
+      }
+
+      const signInResult = await signIn("credentials", { email, password, redirect: false });
+      if (signInResult?.error) {
+        router.push("/login?registered=1");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("No se pudo crear la cuenta. Inténtalo de nuevo.");
+      (form.elements.namedItem("password") as HTMLInputElement).value = "";
+      setBusy(false);
+    }
   }
-  return <form method="POST" onSubmit={submit} className="space-y-4 font-sans"><input name="name" placeholder="Tu nombre (opcional)" className="field" /><input required name="email" type="email" placeholder="correo@ejemplo.com" className="field" /><input required minLength={8} name="password" type="password" placeholder="Contraseña (mínimo 8 caracteres)" className="field" />{error && <p className="text-sm text-red-400">{error}</p>}<button disabled={busy} className="w-full bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:bg-white disabled:opacity-50">{busy ? "Creando cuenta..." : "Crear cuenta"}</button></form>;
+
+  return (
+    <form method="POST" onSubmit={submit} className="form-stack">
+      <div className="form-field">
+        <label className="form-label" htmlFor="register-name">Nombre</label>
+        <input id="register-name" name="name" autoComplete="name" placeholder="Tu nombre (opcional)" className="field" />
+      </div>
+      <div className="form-field">
+        <label className="form-label" htmlFor="register-email">Correo electrónico</label>
+        <input required id="register-email" name="email" type="email" autoComplete="email" placeholder="correo@ejemplo.com" className="field" />
+      </div>
+      <div className="form-field">
+        <label className="form-label" htmlFor="register-password">Contraseña</label>
+        <PasswordInput required minLength={8} id="register-password" name="password" autoComplete="new-password" placeholder="Contraseña (mínimo 8 caracteres)" />
+      </div>
+      {error && <p role="alert" className="form-error">{error}</p>}
+      <button type="submit" disabled={busy} className="btn btn-primary w-full">{busy ? "Creando cuenta..." : "Crear cuenta"}</button>
+    </form>
+  );
 }
