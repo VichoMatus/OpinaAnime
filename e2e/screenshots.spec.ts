@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
-// Capturas de página completa para comparar el antes/después del rediseño.
+// Capturas de página para comparar el antes/después del rediseño.
 // Requiere: Postgres local + `npm run db:push` + `npm run db:seed:e2e`.
 // Salida: SHOT_DIR (por defecto docs/opinaanime-redesign/screenshots/after), archivo <proyecto>-<página>.png
 const SHOT_DIR = process.env.SHOT_DIR ?? "docs/opinaanime-redesign/screenshots/after";
@@ -62,10 +62,24 @@ async function settle(page: Page) {
   await assertNoHorizontalOverflow(page);
 }
 
-async function shot(page: Page, name: string) {
+async function shot(page: Page, name: string, options?: { clipHeight?: number }) {
   await settle(page);
-  const file = path.join(SHOT_DIR, `${test.info().project.name}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true, animations: "disabled" });
+  const projectName = test.info().project.name;
+  const file = path.join(SHOT_DIR, `${projectName}-${name}.png`);
+  const viewport = page.viewportSize();
+
+  if (options?.clipHeight && viewport) {
+    const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    const height = Math.min(options.clipHeight, pageHeight);
+    await page.screenshot({
+      path: file,
+      fullPage: true,
+      clip: { x: 0, y: 0, width: viewport.width, height },
+      animations: "disabled",
+    });
+  } else {
+    await page.screenshot({ path: file, fullPage: true, animations: "disabled" });
+  }
 }
 
 async function login(page: Page) {
@@ -81,7 +95,6 @@ test.describe("capturas sin sesión", () => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/login");
     await expect(page.locator('input[name="email"]')).toBeVisible();
-    await shot(page, "login");
     await shot(page, "login-light");
 
     await page.emulateMedia({ colorScheme: "dark" });
@@ -98,14 +111,17 @@ test.describe("capturas sin sesión", () => {
 
 test.describe("capturas con sesión", () => {
   test("home (claro y oscuro) y detalle", async ({ page }) => {
+    const isMobile = test.info().project.name === "mobile";
+    // En móvil capturamos viewport + 1 scroll (2 * 844 = 1688px); en desktop fullPage completo
+    const homeClipHeight = isMobile ? 1688 : undefined;
+
     await page.emulateMedia({ colorScheme: "light" });
     await login(page);
     await expect(page.getByText("Sousou no Frieren").first()).toBeVisible();
-    await shot(page, "home");
-    await shot(page, "home-light");
+    await shot(page, "home-light", { clipHeight: homeClipHeight });
 
     await page.emulateMedia({ colorScheme: "dark" });
-    await shot(page, "home-dark");
+    await shot(page, "home-dark", { clipHeight: homeClipHeight });
 
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto(`/anime/${detailId}`);
