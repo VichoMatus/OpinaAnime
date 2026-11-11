@@ -37,16 +37,17 @@ interface TierListProps {
 
 interface TierConfig {
   name: Tier;
-  colorClass: string;
+  subtitle: string;
+  badgeStyle: React.CSSProperties;
 }
 
 const TIER_CONFIGS: TierConfig[] = [
-  { name: "S", colorClass: "bg-red-400 text-black" },
-  { name: "A", colorClass: "bg-orange-300 text-black" },
-  { name: "B", colorClass: "bg-amber-200 text-black" },
-  { name: "C", colorClass: "bg-yellow-200 text-black" },
-  { name: "D", colorClass: "bg-green-300 text-black" },
-  { name: "E", colorClass: "bg-green-400 text-black" },
+  { name: "S", subtitle: "Obra maestra", badgeStyle: { backgroundColor: "#DC2626", color: "#FFFFFF" } },
+  { name: "A", subtitle: "Excelente", badgeStyle: { backgroundColor: "#EA580C", color: "#FFFFFF" } },
+  { name: "B", subtitle: "Muy bueno", badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
+  { name: "C", subtitle: "Entretenido", badgeStyle: { backgroundColor: "#CA8A04", color: "#FFFFFF" } },
+  { name: "D", subtitle: "Regular", badgeStyle: { backgroundColor: "#16A34A", color: "#FFFFFF" } },
+  { name: "E", subtitle: "Flojo", badgeStyle: { backgroundColor: "#0D9488", color: "#FFFFFF" } },
 ];
 
 export default function TierList({
@@ -56,6 +57,7 @@ export default function TierList({
 }: TierListProps) {
   const [items, setItems] = useState<TierRecommendation[]>(recommendations);
   const [mounted, setMounted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -87,6 +89,7 @@ export default function TierList({
       return;
     }
 
+    setErrorMessage("");
     const sourceDroppable = source.droppableId;
     const destDroppable = destination.droppableId;
 
@@ -238,14 +241,12 @@ export default function TierList({
 
       if (!res.ok) {
         const errorData = await res.json();
-        console.error("Error al guardar orden de tiers:", errorData);
-        alert(errorData.error || "No se pudo sincronizar el nuevo orden.");
+        setErrorMessage(errorData.error || "No se pudo guardar el nuevo orden de la Tier List.");
         setItems(prevItems);
         if (onReorder) onReorder(prevItems);
       }
-    } catch (err) {
-      console.error("Error de red al actualizar orden:", err);
-      alert("Error de red al guardar el orden.");
+    } catch {
+      setErrorMessage("Error de conexión al guardar el orden de la Tier List.");
       setItems(prevItems);
       if (onReorder) onReorder(prevItems);
     }
@@ -260,56 +261,60 @@ export default function TierList({
   if (!mounted || !isAdmin) {
     return (
       <div className="w-full space-y-4 font-sans">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1f2128]">
-          <p className="text-xs text-zinc-400">
-            Haz clic en la portada de cualquier anime para ver la reseña y el debate. Los animes están ordenados de mejor a peor dentro de cada fila.
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-border bg-surface p-4 shadow-card">
+          <p className="text-sm text-fg-muted">
+            Toca cualquier portada para leer la reseña y sumarte a las opiniones. Dentro de cada fila están ordenados del favorito al menos favorito.
           </p>
-          <span className="text-xs text-zinc-500 font-mono">
+          <span className="shrink-0 rounded-full bg-surface-subtle px-3 py-1 text-xs font-semibold text-fg-muted border border-border">
             {items.filter((i) => i.tier !== null).length} animes clasificados
           </span>
         </div>
 
-        <div className="space-y-1.5 overflow-hidden rounded-md border border-black shadow-lg">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-elevated divide-y divide-border">
           {TIER_CONFIGS.map((tier) => {
             const tierItems = getTierItems(tier.name);
 
             return (
               <div
                 key={tier.name}
-                className="flex border-b border-black last:border-b-0 min-h-[96px] bg-zinc-900"
+                className="flex min-h-[112px] bg-surface"
               >
                 {/* Etiqueta del Tier */}
                 <div
-                  className={`w-20 sm:w-24 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 uppercase select-none border-r border-black ${tier.colorClass}`}
+                  style={tier.badgeStyle}
+                  className="w-20 sm:w-28 flex flex-col items-center justify-center shrink-0 select-none border-r border-border p-2 text-center"
                 >
-                  {tier.name}
+                  <span className="font-display font-extrabold text-2xl sm:text-3xl leading-none">
+                    {tier.name}
+                  </span>
+                  <span className="mt-1 text-[10px] font-semibold opacity-90 hidden sm:block">
+                    {tier.subtitle}
+                  </span>
                 </div>
 
                 {/* Contenedor de portadas */}
-                <div className="bg-zinc-900 flex-1 p-2 flex flex-wrap gap-2 items-center">
+                <div className="flex-1 p-3 flex flex-wrap gap-3 items-center bg-surface-subtle/40">
                   {tierItems.length === 0 ? (
-                    <span className="text-zinc-600 text-xs italic pl-3 select-none">
-                      Sin animes en este tier
+                    <span className="text-fg-subtle text-sm italic pl-2 select-none">
+                      Aún no hay animes clasificados en el Tier {tier.name}
                     </span>
                   ) : (
                     tierItems.map((item) => (
                       <Link
                         key={item.id}
                         href={`/anime/${item.id}`}
-                        title={`${item.title} - Ver opinión`}
-                        className="relative group w-16 h-22 sm:w-20 sm:h-28 rounded overflow-hidden border border-black bg-zinc-950 shrink-0 hover:scale-105 hover:border-white transition-all shadow-sm"
+                        title={`${item.title} — Ver opiniones`}
+                        className="relative group w-20 h-28 sm:w-24 sm:h-32 rounded-xl overflow-hidden border border-border-strong bg-surface shrink-0 hover:scale-105 hover:border-primary focus-visible:outline-2 focus-visible:outline-ring transition-all shadow-card"
                       >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.imageUrl}
                           alt={item.title}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5 text-center">
-                          <span className="text-[10px] text-white font-medium line-clamp-2 leading-tight">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2 pt-5 opacity-95 group-hover:opacity-100 transition-opacity">
+                          <span className="block text-[11px] text-white font-semibold line-clamp-2 leading-tight">
                             {item.title}
-                          </span>
-                          <span className="text-[9px] text-blue-300 underline font-semibold">
-                            Ver opinión →
                           </span>
                         </div>
                       </Link>
@@ -327,31 +332,50 @@ export default function TierList({
   // Vista de ADMIN con Drag and Drop (@hello-pangea/dnd) con soporte de reordenamiento
   return (
     <div className="w-full space-y-6 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#1f2128] gap-2">
-        <p className="text-xs text-zinc-300">
-          <span className="font-semibold text-blue-400">Modo Administrador:</span> Arrastra las carátulas para ordenarlas dentro del tier (la más a la izquierda es superior) o muévelas de fila.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-border bg-surface p-4 shadow-card">
+        <p className="text-sm text-fg-muted">
+          <strong className="font-semibold text-primary">Modo Administrador:</strong> Arrastra las portadas para ordenarlas dentro de cada tier (de mejor a peor, de izquierda a derecha) o muévelas entre filas.
         </p>
-        <span className="text-xs text-zinc-400 font-mono">
-          {items.filter((i) => i.tier !== null).length} en tiers • {bankItems.length} en banco
+        <span className="shrink-0 rounded-full bg-surface-subtle px-3 py-1 text-xs font-semibold text-fg-muted border border-border">
+          {items.filter((i) => i.tier !== null).length} en tiers • {bankItems.length} por clasificar
         </span>
       </div>
 
+      {errorMessage && (
+        <div role="alert" className="form-error justify-between">
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage("")}
+            className="text-xs font-semibold underline"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
       <DragDropContext onDragEnd={handleDragEnd}>
-        {/* Cuadrícula Clásica de Tier List */}
-        <div className="space-y-1.5 overflow-hidden rounded-md border border-black shadow-xl">
+        {/* Cuadrícula de Tier List */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-elevated divide-y divide-border">
           {TIER_CONFIGS.map((tier) => {
             const tierItems = getTierItems(tier.name);
 
             return (
               <div
                 key={tier.name}
-                className="flex border-b border-black last:border-b-0 min-h-[104px] bg-zinc-900"
+                className="flex min-h-[116px] bg-surface"
               >
                 {/* Etiqueta del Tier */}
                 <div
-                  className={`w-20 sm:w-24 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 uppercase select-none border-r border-black ${tier.colorClass}`}
+                  style={tier.badgeStyle}
+                  className="w-20 sm:w-28 flex flex-col items-center justify-center shrink-0 select-none border-r border-border p-2 text-center"
                 >
-                  {tier.name}
+                  <span className="font-display font-extrabold text-2xl sm:text-3xl leading-none">
+                    {tier.name}
+                  </span>
+                  <span className="mt-1 text-[10px] font-semibold opacity-90 hidden sm:block">
+                    {tier.subtitle}
+                  </span>
                 </div>
 
                 {/* Zona Droppable para portadas */}
@@ -360,10 +384,10 @@ export default function TierList({
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`bg-zinc-900 flex-1 p-2 flex flex-wrap gap-2 items-center transition-colors min-h-[104px] ${
+                      className={`flex-1 p-3 flex flex-wrap gap-3 items-center transition-colors min-h-[116px] ${
                         snapshot.isDraggingOver
-                          ? "bg-zinc-800/90 ring-2 ring-inset ring-blue-500/50"
-                          : ""
+                          ? "bg-primary-soft/50 ring-2 ring-inset ring-primary"
+                          : "bg-surface-subtle/40"
                       }`}
                     >
                       {tierItems.map((item, index) => (
@@ -377,13 +401,14 @@ export default function TierList({
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`relative group w-16 h-22 sm:w-20 sm:h-28 rounded overflow-hidden border border-black bg-zinc-950 shrink-0 cursor-grab active:cursor-grabbing transition-transform ${
+                              className={`relative group w-20 h-28 sm:w-24 sm:h-32 rounded-xl overflow-hidden border bg-surface shrink-0 cursor-grab active:cursor-grabbing transition-transform ${
                                 dragSnapshot.isDragging
-                                  ? "shadow-2xl scale-105 z-50 ring-2 ring-white"
-                                  : "hover:border-zinc-400"
+                                  ? "shadow-modal scale-105 z-50 ring-2 ring-primary border-primary"
+                                  : "border-border-strong hover:border-primary shadow-card"
                               }`}
                               title={`${item.title} (Posición #${index + 1} en Tier ${tier.name})`}
                             >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={item.imageUrl}
                                 alt={item.title}
@@ -391,16 +416,16 @@ export default function TierList({
                               />
                               <Link
                                 href={`/anime/${item.id}`}
-                                className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5 text-center"
+                                className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
                                 onClick={(e) => {
                                   if (dragSnapshot.isDragging) e.preventDefault();
                                 }}
                               >
-                                <span className="text-[10px] text-white font-medium line-clamp-2 leading-tight">
+                                <span className="text-[11px] text-white font-semibold line-clamp-2 leading-tight">
                                   {item.title}
                                 </span>
-                                <span className="text-[9px] text-blue-300 underline font-semibold">
-                                  Ver opinión →
+                                <span className="text-[10px] text-amber-300 underline font-semibold">
+                                  Ver debate →
                                 </span>
                               </Link>
                             </div>
@@ -409,8 +434,8 @@ export default function TierList({
                       ))}
                       {provided.placeholder}
                       {tierItems.length === 0 && !snapshot.isDraggingOver && (
-                        <span className="text-zinc-600 text-xs italic pl-3 select-none">
-                          Arrastra series aquí
+                        <span className="text-fg-subtle text-sm italic pl-2 select-none">
+                          Arrastra series aquí para clasificarlas en el Tier {tier.name}
                         </span>
                       )}
                     </div>
@@ -422,17 +447,17 @@ export default function TierList({
         </div>
 
         {/* Banco de Series Terminadas (Solo Admin) */}
-        <div className="mt-8 bg-[#121318] border border-[#22242a] rounded-xl p-5 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-[#1f2128] gap-2">
+        <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-border gap-2">
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <span>Banco de Series Terminadas</span>
-                <span className="text-xs font-normal text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">
+              <h3 className="text-base font-bold text-fg flex items-center gap-2">
+                <span>Banco de animes terminados sin clasificar</span>
+                <span className="text-xs font-semibold text-fg-muted bg-surface-subtle px-2.5 py-0.5 rounded-full border border-border">
                   {bankItems.length}
                 </span>
               </h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                Series con estado <strong className="text-emerald-400">Terminado</strong> que aún no tienen tier asignado. Arrástralas hacia la cuadrícula de arriba en la posición que desees.
+              <p className="text-sm text-fg-muted mt-1">
+                Animes marcados como <strong className="text-success">Terminado</strong> que aún no tienen un tier asignado. Arrástralos hacia la fila que prefieras.
               </p>
             </div>
           </div>
@@ -442,15 +467,15 @@ export default function TierList({
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className={`bg-zinc-900 border border-black rounded-lg p-3 min-h-[124px] flex flex-wrap gap-2.5 items-center transition-colors ${
+                className={`rounded-xl border border-dashed border-border-strong p-4 min-h-[132px] flex flex-wrap gap-3 items-center transition-colors ${
                   snapshot.isDraggingOver
-                    ? "bg-zinc-800/90 ring-2 ring-inset ring-amber-500/50"
-                    : ""
+                    ? "bg-primary-soft/40 ring-2 ring-inset ring-primary"
+                    : "bg-surface-subtle/50"
                 }`}
               >
                 {bankItems.length === 0 && !snapshot.isDraggingOver ? (
-                  <div className="w-full text-center py-6 text-zinc-500 text-xs italic">
-                    No hay series terminadas pendientes de clasificar en el banco.
+                  <div className="w-full text-center py-6 text-fg-subtle text-sm">
+                    ¡Todo al día! No hay animes terminados pendientes de clasificar en el banco.
                   </div>
                 ) : (
                   bankItems.map((item, index) => (
@@ -464,13 +489,14 @@ export default function TierList({
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           {...dragProvided.dragHandleProps}
-                          className={`relative group w-16 h-22 sm:w-20 sm:h-28 rounded overflow-hidden border border-black bg-zinc-950 shrink-0 cursor-grab active:cursor-grabbing transition-transform ${
+                          className={`relative group w-20 h-28 sm:w-24 sm:h-32 rounded-xl overflow-hidden border bg-surface shrink-0 cursor-grab active:cursor-grabbing transition-transform ${
                             dragSnapshot.isDragging
-                              ? "shadow-2xl scale-105 z-50 ring-2 ring-white"
-                              : "hover:border-zinc-400"
+                              ? "shadow-modal scale-105 z-50 ring-2 ring-primary border-primary"
+                              : "border-border-strong hover:border-primary shadow-card"
                           }`}
                           title={`${item.title} (Arrastrar a la Tier List)`}
                         >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={item.imageUrl}
                             alt={item.title}
@@ -478,16 +504,16 @@ export default function TierList({
                           />
                           <Link
                             href={`/anime/${item.id}`}
-                            className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5 text-center"
+                            className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
                             onClick={(e) => {
                               if (dragSnapshot.isDragging) e.preventDefault();
                             }}
                           >
-                            <span className="text-[10px] text-white font-medium line-clamp-2 leading-tight">
+                            <span className="text-[11px] text-white font-semibold line-clamp-2 leading-tight">
                               {item.title}
                             </span>
-                            <span className="text-[9px] text-blue-300 underline font-semibold">
-                              Ver opinión →
+                            <span className="text-[10px] text-amber-300 underline font-semibold">
+                              Ver debate →
                             </span>
                           </Link>
                         </div>

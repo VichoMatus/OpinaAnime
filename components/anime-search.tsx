@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { useRouter } from "next/navigation";
 import { SearchIcon } from "@/components/icons";
 
@@ -30,9 +30,11 @@ interface AnimeSearchProps {
 
 export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSearchProps) {
   const router = useRouter();
+  const inputId = useId();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogAnime[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [checkingItem, setCheckingItem] = useState<string | null>(null);
   const [searchError, setSearchError] = useState("");
   const [redirectNotice, setRedirectNotice] = useState("");
@@ -45,6 +47,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
     if (trimmed.length < 2) {
       setResults([]);
       setLoading(false);
+      setHasSearched(false);
       setSearchError("");
       return;
     }
@@ -66,7 +69,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || "Error al consultar el catálogo.");
+          throw new Error(errData.error || "No pudimos consultar el catálogo en este momento.");
         }
 
         const data = await res.json();
@@ -91,6 +94,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
         }));
 
         setResults(formatted);
+        setHasSearched(true);
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         setSearchError(
@@ -122,7 +126,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
       const data = await res.json();
 
       if (data.exists && data.recommendationId) {
-        setRedirectNotice(`¡"${anime.title}" ya existe en el foro! Redirigiendo al hilo...`);
+        setRedirectNotice(`¡"${anime.title}" ya está en el foro! Llevándote a su debate...`);
         setTimeout(() => {
           router.push(`/anime/${data.recommendationId}?notice=already_exists`);
         }, 600);
@@ -132,8 +136,9 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
       onSelectAnime(anime);
       setQuery("");
       setResults([]);
+      setHasSearched(false);
     } catch {
-      setSearchError("Error al verificar disponibilidad del anime en la base de datos.");
+      setSearchError("No pudimos verificar si el anime ya está en el foro. Inténtalo de nuevo.");
     } finally {
       setCheckingItem(null);
     }
@@ -141,45 +146,56 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
 
   return (
     <div className="relative w-full font-sans">
-      <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-        Buscar en el Catálogo:
-      </label>
+      <div className="form-field">
+        <label htmlFor={inputId} className="form-label">
+          Buscar anime en el catálogo
+        </label>
 
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          disabled={disabled}
-          placeholder="Escribe el nombre del anime (ej. Titan, Hero, Naruto...)"
-          className="w-full bg-[#0a0b0e] border border-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-        />
-        <div className="absolute left-3 top-3 text-zinc-400 pointer-events-none">
-          <SearchIcon className="w-4 h-4" />
-        </div>
-
-        {loading && (
-          <div className="absolute right-3 top-3 text-xs text-blue-400 font-sans">
-            Buscando...
+        <div className="relative">
+          <input
+            id={inputId}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            disabled={disabled}
+            placeholder="Ej. Frieren, Naruto, Attack on Titan..."
+            className="field pl-10 pr-20"
+            autoComplete="off"
+          />
+          <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-subtle">
+            <SearchIcon className="h-4 w-4" />
           </div>
-        )}
+
+          {loading && (
+            <div className=" absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-primary">
+              Buscando...
+            </div>
+          )}
+        </div>
       </div>
 
       {redirectNotice && (
-        <div className="mt-2 p-2.5 rounded-lg bg-blue-950/40 border border-blue-500/40 text-blue-200 text-xs">
-          {redirectNotice}
+        <div role="status" className="form-notice mt-3">
+          <span>{redirectNotice}</span>
         </div>
       )}
 
       {searchError && (
-        <p className="mt-2 text-xs text-rose-400 bg-rose-950/30 border border-rose-800/40 p-2 rounded-lg">
-          {searchError}
-        </p>
+        <div role="alert" className="form-error mt-3">
+          <span>{searchError}</span>
+        </div>
+      )}
+
+      {/* Estado vacío cuando no hay coincidencias */}
+      {!loading && hasSearched && results.length === 0 && !searchError && query.trim().length >= 2 && (
+        <div className="mt-2 rounded-xl border border-border bg-surface-subtle p-3.5 text-center text-xs text-fg-muted">
+          No encontramos animes para <strong className="text-fg">&quot;{query.trim()}&quot;</strong>. Prueba con su título en japonés o inglés.
+        </div>
       )}
 
       {/* Resultados desplegables */}
       {results.length > 0 && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-[#22242a] bg-[#121318] shadow-xl">
+        <div className="absolute left-0 right-0 z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-border-strong bg-surface shadow-modal">
           <div className="p-1.5 space-y-1">
             {results.map((anime) => (
               <button
@@ -187,33 +203,34 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
                 type="button"
                 onClick={() => handleSelect(anime)}
                 disabled={checkingItem !== null}
-                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#1a1b22] text-left transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-ring text-left transition-colors cursor-pointer disabled:opacity-50"
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={anime.imageUrl}
                   alt={anime.title}
-                  className="w-12 h-16 object-cover rounded bg-zinc-950 shrink-0 border border-zinc-800"
+                  className="w-12 h-16 object-cover rounded-md bg-surface-subtle shrink-0 border border-border"
                 />
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-medium text-white truncate">
+                  <h4 className="text-sm font-bold text-fg truncate">
                     {anime.title}
                   </h4>
                   {anime.titleEn && anime.titleEn !== anime.title && (
-                    <p className="text-xs text-zinc-400 truncate">{anime.titleEn}</p>
+                    <p className="text-xs text-fg-muted truncate">{anime.titleEn}</p>
                   )}
-                  <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-400">
-                    <span className="rounded bg-[#1a1b22] px-1.5 py-0.5 border border-zinc-700">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-fg-subtle">
+                    <span className="rounded-md bg-surface-subtle px-1.5 py-0.5 font-medium text-fg-muted border border-border">
                       {anime.type ?? "TV"}
                     </span>
                     {anime.year && <span>{anime.year}</span>}
-                    <span className="text-zinc-400 font-mono text-[10px]">
+                    <span className="font-mono text-[11px]">
                       #{anime.externalId}
                     </span>
                   </div>
                 </div>
 
                 {checkingItem === anime.id && (
-                  <span className="text-xs text-blue-400 shrink-0">
+                  <span className="text-xs font-semibold text-primary shrink-0">
                     Verificando...
                   </span>
                 )}
