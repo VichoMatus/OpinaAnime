@@ -4,6 +4,7 @@ import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
+import { getTierBadgeClass, getTierBadgeStyle } from "@/lib/tier-styles";
 import { ExternalLinkIcon, TrashIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
@@ -62,22 +63,6 @@ const statusLabels: Record<string, string> = {
   COMPLETED: "Terminado",
   DROPPED: "Descartado",
 };
-
-function getTierBadgeClass(tier: string | null) {
-  switch (tier) {
-    case "S":
-    case "A":
-      return "bg-danger-soft text-danger border-danger-border";
-    case "B":
-    case "C":
-      return "bg-warning-soft text-warning border-warning-border";
-    case "D":
-    case "E":
-      return "bg-success-soft text-success border-success-border";
-    default:
-      return "bg-surface-subtle text-fg-muted border-border-strong";
-  }
-}
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
@@ -208,7 +193,7 @@ export default function AnimeThread({
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "No se pudo guardar el veredicto.");
+        throw new Error(errorData.error || "No se pudo guardar la reseña final.");
       }
 
       const updated = await res.json();
@@ -219,7 +204,7 @@ export default function AnimeThread({
         adminReview: updated.adminReview,
       }));
       setAdminMessage({
-        text: "Veredicto, tier y estado guardados correctamente.",
+        text: "Reseña final, tier y estado guardados correctamente.",
         type: "success",
       });
       setTimeout(() => setAdminMessage(null), 4000);
@@ -406,17 +391,18 @@ export default function AnimeThread({
                     {isAdmin ? (
                       <div className="flex flex-wrap items-center gap-1.5">
                         <select
-                          aria-label="Cambiar Tier (Admin)"
+                          aria-label={`Cambiar Tier de ${item.title}`}
                           value={item.tier ?? ""}
                           onChange={(e) =>
                             handleQuickUpdate({
                               tier: (e.target.value as "S" | "A" | "B" | "C" | "D" | "E") || null,
                             })
                           }
+                          style={getTierBadgeStyle(item.tier)}
                           className={`px-2.5 py-1.5 rounded-lg font-bold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getTierBadgeClass(
                             item.tier
                           )}`}
-                          title="Cambiar Tier (Admin)"
+                          title="Cambiar Tier"
                         >
                           <option value="">Sin tier</option>
                           <option value="S">Tier S</option>
@@ -428,7 +414,7 @@ export default function AnimeThread({
                         </select>
 
                         <select
-                          aria-label="Cambiar estado (Admin)"
+                          aria-label={`Cambiar estado de ${item.title}`}
                           value={item.status}
                           onChange={(e) =>
                             handleQuickUpdate({
@@ -438,7 +424,7 @@ export default function AnimeThread({
                           className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getStatusBadgeClass(
                             item.status
                           )}`}
-                          title="Cambiar estado (Admin)"
+                          title="Cambiar estado"
                         >
                           <option value="PENDING">Lo veré</option>
                           <option value="WATCHING">Viendo</option>
@@ -449,6 +435,7 @@ export default function AnimeThread({
                     ) : (
                       <>
                         <span
+                          style={getTierBadgeStyle(item.tier)}
                           className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${getTierBadgeClass(
                             item.tier
                           )}`}
@@ -495,23 +482,24 @@ export default function AnimeThread({
             </div>
           </div>
 
-          {/* Reseña Final del Administrador */}
+          {/* Reseña final */}
           {item.adminReview && (
             <div className="border-t border-border bg-warning-soft/50 p-5 sm:p-8">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <StarIcon className="w-5 h-5 text-warning" />
                   <h2 className="text-sm sm:text-base font-extrabold text-fg">
-                    Reseña Final del Administrador
+                    Reseña final
                   </h2>
                 </div>
                 {item.tier && (
                   <span
+                    style={getTierBadgeStyle(item.tier)}
                     className={`text-xs px-3 py-1 rounded-full border font-bold ${getTierBadgeClass(
                       item.tier
                     )}`}
                   >
-                    Veredicto: Tier {item.tier}
+                    Reseña final: Tier {item.tier}
                   </span>
                 )}
               </div>
@@ -521,11 +509,11 @@ export default function AnimeThread({
             </div>
           )}
 
-          {/* Panel de Moderación y Veredicto exclusivo de Admin */}
+          {/* Panel de Reseña final y Moderación */}
           {isAdmin && (
             <div className="border-t border-border bg-surface-subtle/60 p-5 sm:p-8">
               <h2 className="text-base font-extrabold text-fg mb-4">
-                Panel de Veredicto y Moderación (Admin)
+                Editar reseña final y estado
               </h2>
 
               <form onSubmit={handleAdminSave} className="form-stack">
@@ -570,7 +558,7 @@ export default function AnimeThread({
 
                 <div className="form-field">
                   <label htmlFor={adminReviewId} className="form-label">
-                    Reseña final del Administrador
+                    Reseña final
                   </label>
                   <textarea
                     id={adminReviewId}
@@ -580,8 +568,8 @@ export default function AnimeThread({
                     onChange={(e) => setAdminReviewText(e.target.value)}
                     placeholder={
                       adminStatus === "COMPLETED"
-                        ? "Escribe tu conclusión antes de marcar el anime como Terminado (obligatorio)..."
-                        : "Comparte tu análisis final y conclusión sobre la serie..."
+                        ? "Escribe tu reseña final antes de marcar el anime como Terminado (obligatorio)..."
+                        : "Comparte tu reseña final y conclusión sobre la serie..."
                     }
                     className="field resize-none"
                   />
@@ -602,7 +590,7 @@ export default function AnimeThread({
                     disabled={adminSaving}
                     className="btn btn-primary"
                   >
-                    {adminSaving ? "Guardando veredicto..." : "Guardar cambios de Admin"}
+                    {adminSaving ? "Guardando reseña final..." : "Guardar reseña final"}
                   </button>
                 </div>
               </form>
@@ -610,11 +598,11 @@ export default function AnimeThread({
           )}
         </article>
 
-        {/* Sección de Debate / Opiniones */}
+        {/* Sección de Opiniones de la comunidad */}
         <section className="mt-10">
           <div className="flex items-center justify-between border-b border-border pb-3 mb-6">
             <h2 className="text-xl sm:text-2xl font-extrabold text-fg tracking-tight">
-              Hilos de Debate ({comments.length})
+              Opiniones de la comunidad ({comments.length})
             </h2>
           </div>
 
@@ -648,7 +636,7 @@ export default function AnimeThread({
                   disabled={commentSubmitting || !newCommentBody.trim()}
                   className="btn btn-primary"
                 >
-                  {commentSubmitting ? "Publicando..." : "Publicar Comentario"}
+                  {commentSubmitting ? "Publicando..." : "Publicar opinión"}
                 </button>
               </div>
             </div>
@@ -662,7 +650,7 @@ export default function AnimeThread({
                   Aún no hay opiniones, ¡sé el primero!
                 </p>
                 <p className="mt-1 text-sm text-fg-muted">
-                  Aún no hay comentarios en este debate. ¡Comparte qué te pareció arriba!
+                  Comparte qué te pareció este anime en el recuadro de arriba para abrir la conversación.
                 </p>
               </div>
             ) : (

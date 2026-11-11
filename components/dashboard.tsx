@@ -6,6 +6,7 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import AnimeSearch, { CatalogAnime } from "@/components/anime-search";
 import TierList, { Tier } from "@/components/tier-list";
+import { getTierBadgeClass, getTierBadgeStyle } from "@/lib/tier-styles";
 import { MessageSquareIcon, TrashIcon, StarIcon, ThumbsUpIcon, SearchIcon } from "@/components/icons";
 
 export type Role = "ADMIN" | "USER";
@@ -61,22 +62,6 @@ const filterTabs = [
   { label: "Lo veré", value: "PENDING" },
   { label: "Descartados", value: "DROPPED" },
 ];
-
-function getTierBadgeClass(tier: string | null) {
-  switch (tier) {
-    case "S":
-    case "A":
-      return "bg-danger-soft text-danger border-danger-border";
-    case "B":
-    case "C":
-      return "bg-warning-soft text-warning border-warning-border";
-    case "D":
-    case "E":
-      return "bg-success-soft text-success border-success-border";
-    default:
-      return "bg-surface-subtle text-fg-muted border-border-strong";
-  }
-}
 
 function getStatusBadgeClass(status: string) {
   switch (status) {
@@ -425,8 +410,8 @@ export default function Dashboard({
                       <h3 className="text-sm font-bold text-fg truncate">
                         {selectedAnime.title}
                       </h3>
-                      <p className="text-xs text-fg-subtle font-mono mt-0.5">
-                        Catálogo #{selectedAnime.externalId}
+                      <p className="text-xs text-fg-subtle mt-0.5">
+                        {[selectedAnime.type ?? "Anime", selectedAnime.year].filter(Boolean).join(" • ")}
                       </p>
                       <button
                         type="button"
@@ -603,7 +588,7 @@ export default function Dashboard({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 min-w-0 sm:shrink-0">
                       <label
                         htmlFor={sortSelectId}
                         className="text-xs sm:text-sm font-semibold text-fg-muted whitespace-nowrap"
@@ -614,7 +599,7 @@ export default function Dashboard({
                         id={sortSelectId}
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                        className="select flex-1 sm:flex-initial"
+                        className="select w-full min-w-0 flex-1 sm:w-auto sm:flex-initial"
                       >
                         <option value="votados">Más votados / apoyados</option>
                         <option value="recientes">Más recientes</option>
@@ -755,10 +740,11 @@ export default function Dashboard({
                                               tier: (e.target.value as Tier) || null,
                                             })
                                           }
+                                          style={getTierBadgeStyle(item.tier)}
                                           className={`px-2.5 py-1 rounded-lg font-bold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getTierBadgeClass(
                                             item.tier
                                           )}`}
-                                          title="Asignar Tier (Admin)"
+                                          title="Asignar Tier"
                                         >
                                           <option value="">Sin tier</option>
                                           <option value="S">Tier S</option>
@@ -780,7 +766,7 @@ export default function Dashboard({
                                           className={`px-2.5 py-1 rounded-lg font-semibold text-xs border cursor-pointer focus-visible:outline-2 focus-visible:outline-ring ${getStatusBadgeClass(
                                             item.status
                                           )}`}
-                                          title="Cambiar estado (Admin)"
+                                          title="Cambiar estado"
                                         >
                                           <option value="PENDING">Lo veré</option>
                                           <option value="WATCHING">Viendo</option>
@@ -791,6 +777,7 @@ export default function Dashboard({
                                     ) : (
                                       <>
                                         <span
+                                          style={getTierBadgeStyle(item.tier)}
                                           className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${getTierBadgeClass(
                                             item.tier
                                           )}`}
@@ -810,7 +797,7 @@ export default function Dashboard({
                                     {item.adminReview && (
                                       <span className="inline-flex items-center gap-1 rounded-lg bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning border border-warning-border">
                                         <StarIcon className="w-3.5 h-3.5" />
-                                        <span>Reseña Admin</span>
+                                        <span>Reseña final</span>
                                       </span>
                                     )}
 

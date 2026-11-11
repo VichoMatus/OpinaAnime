@@ -64,6 +64,7 @@ async function settle(page: Page) {
 
 async function shot(page: Page, name: string, options?: { clipHeight?: number }) {
   await settle(page);
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
   const projectName = test.info().project.name;
   const file = path.join(SHOT_DIR, `${projectName}-${name}.png`);
   const viewport = page.viewportSize();

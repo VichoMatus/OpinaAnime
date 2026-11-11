@@ -223,9 +223,6 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
                       {anime.type ?? "TV"}
                     </span>
                     {anime.year && <span>{anime.year}</span>}
-                    <span className="font-mono text-[11px]">
-                      #{anime.externalId}
-                    </span>
                   </div>
                 </div>
 

@@ -80,6 +80,8 @@ Los colores están definidos como variables semánticas en `app/globals.css` (co
 | `--tier-d` | `bg-tier-d` | `#15803D` | **5.02 : 1** | Tier D — Regular |
 | `--tier-e` | `bg-tier-e` | `#0F766E` | **5.47 : 1** | Tier E — Flojo |
 | `--tier-fg` | `text-tier-fg` | `#FFFFFF` | — | Texto sobre badges y overlays de Tier List |
+| `--overlay` | `via-overlay` / `bg-overlay` | `rgb(18 17 16 / 0.65)` | — | Degradado intermedio sobre portadas en Tier List |
+| `--overlay-strong` | `from-overlay-strong` / `bg-overlay-strong` | `rgb(18 17 16 / 0.90)` | — | Overlay oscuro fuerte sobre portadas en Tier List |
 
 ### 1.4 Verificación de Ratios de Contraste Actualizada (WCAG 2.1 AA y 1.4.11)
 
@@ -125,9 +127,9 @@ Los colores están definidos como variables semánticas en `app/globals.css` (co
 ## 2. Tipografía
 
 Se utilizan fuentes locales mediante `next/font/local` con archivos `.woff2` variables alojados en `app/fonts/` junto con su licencia `OFL.txt` oficial (determinismo total de build sin depender de peticiones de red a Google Fonts y sin agregar dependencias a `package.json`):
-- **Títulos y encabezados (`--font-display`)**: `Plus Jakarta Sans` (`app/fonts/plus-jakarta-sans/PlusJakartaSans-VariableFont_wght.woff2`, pesos `400 800`, licencia `app/fonts/plus-jakarta-sans/OFL.txt`). Redondeada, expresiva, cálida y muy legible en títulos de series y secciones.
+- **Títulos y encabezados (`--font-display`)**: `Plus Jakarta Sans` (`app/fonts/plus-jakarta-sans/PlusJakartaSans-VariableFont_wght.woff2`, pesos `400 800`, licencia `app/fonts/plus-jakarta-sans/OFL.txt`) con `word-spacing: 0.1em` en `h1, h2, h3, h4, .font-display` para compensar el ancho compacto del glifo espacio (`0.18em`) propio de `Plus Jakarta Sans` cuando se combina con `tracking-tight`.
 - **Cuerpo y controles (`--font-sans`)**: `DM Sans` (`app/fonts/dm-sans/DMSans-VariableFont_wght.woff2`, pesos `400 700`, licencia `app/fonts/dm-sans/OFL.txt`) con fallback `system-ui, -apple-system, sans-serif`.
-- **Monoespaciada (`--font-mono`)**: `ui-monospace` para IDs de catálogo y contadores puntuales.
+- **Monoespaciada (`--font-mono`)**: `ui-monospace` para contadores puntuales.
 
 ### Escala Tipográfica
 - **Display / Título de Anime en Detalle**: `1.875rem` (30px) mobile → `2.25rem` (36px) desktop, `font-extrabold`, `leading-tight`.
@@ -187,7 +189,7 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 ```text
 +-----------------------------------------------------------------------------------+
 | [Logo] OpinaAnime       Comunidad de anime entre amigos   [☀/🌙] [Usuario ADMIN]  |
-|                                                           [Sincronizar] [Salir]   |
+|                                                           [Actualizar]  [Salir]   |
 +-----------------------------------------------------------------------------------+
 | BIENVENIDA / CABECERA DEL FORO                                                    |
 | Recomienda joyas, vota tus favoritos y debate cada episodio sin spoilers.         |
@@ -204,8 +206,8 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 |                                                   | | [🔍 Ej. Frieren, Naruto ] | |
 | +-----------------------------------------------+ | |                           | |
 | | +----------+  Sousou no Frieren               | | | (Al elegir un anime:)     | |
-| | |          |  Por Tester E2E • 1/10/2026      | | | [Img] Título (#ID)        | |
-| | | PORTADA  |  [Tier S] [Terminado] [★ Admin]  | | | [¿Por qué vale la pena? ] | |
+| | |          |  Por Tester E2E • 1/10/2026      | | | [Img] Título (TV • Año)   | |
+| | | PORTADA  |  [Tier S] [Terminado] [★ Reseña] | | | [¿Por qué vale la pena? ] | |
 | | |  3:4     |                                  | | | [ Publicar recomendación] | |
 | | |          |  "Una fantasía tranquila sobre   | | +---------------------------+ |
 | | +----------+   el paso del tiempo..."         | |                               |
@@ -235,17 +237,17 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 | | +------------------+   que dejamos en los demás. Cada episodio es un cuento." | |
 | | [Ver en MyAnimeList ↗]                                                        | |
 | +-------------------------------------------------------------------------------+ |
-| | ★ VEREDICTO DEL ADMINISTRADOR                               [Veredicto: Tier S]| |
+| | ★ RESEÑA FINAL                                          [Reseña final: Tier S]| |
 | | "Dirección impecable y una banda sonora que acompaña sin robar protagonismo." | |
 | +-------------------------------------------------------------------------------+ |
-| | (Si es ADMIN) PANEL DE EDICIÓN DE VEREDICTO                                   | |
-| | [Asignar Tier v]  [Estado v]  [Textarea Reseña Final]  [Guardar veredicto]    | |
+| | (Si es ADMIN) EDITAR RESEÑA FINAL Y ESTADO                                    | |
+| | [Asignar Tier v]  [Estado v]  [Textarea Reseña final]  [Guardar reseña final] | |
 | +-------------------------------------------------------------------------------+ |
 |                                                                                   |
 | OPINIONES DE LA COMUNIDAD (3)                                                     |
 | +-------------------------------------------------------------------------------+ |
-| | Tu opinión sobre este anime (sin spoilers)                                    | |
-| | [ Escribe qué te pareció, tu personaje favorito o momento memorable...      ] | |
+| | Suma tu opinión a la conversación                                             | |
+| | [ Comparte qué te pareció este anime, tu escena favorita...                 ] | |
 | |                                                       [ Publicar opinión ]    | |
 | +-------------------------------------------------------------------------------+ |
 | +-------------------------------------------------------------------------------+ |
@@ -289,19 +291,20 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 
 | Archivo | Cambios realizados |
 |---|---|
-| `app/globals.css` | Definición de variables CSS para modo claro y modo oscuro sin duplicación (`--dark-*`), tokens de tier (`--tier-s` a `--tier-e` y `--tier-fg`), contraste WCAG AA/1.4.11 verificado, y clases semánticas de contrato (`.form-stack`, `.form-field`, `.form-label`, `.field`, `.password-field`, `.password-toggle`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.form-error`, `.form-notice`, `.select`). |
+| `app/globals.css` | Definición de variables CSS para modo claro y modo oscuro sin duplicación (`--dark-*`), tokens de tier (`--tier-s` a `--tier-e` y `--tier-fg`), tokens de overlay (`--overlay`, `--overlay-strong`), compensación `word-spacing: 0.1em` en `--font-display`, contraste WCAG AA/1.4.11 verificado, y clases semánticas de contrato (`.form-stack`, `.form-field`, `.form-label`, `.field`, `.password-field`, `.password-toggle`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.form-error`, `.form-notice`, `.select`). |
 | `app/layout.tsx` | Eliminación de `className="dark"` fijo y del color hex `#0b0f19`. Configuración determinista de las fuentes locales `Plus Jakarta Sans` (`--font-heading`) y `DM Sans` (`--font-body`) mediante `next/font/local` desde `app/fonts/`. Uso de `bg-bg text-fg`. |
 | `app/fonts/**` | Archivos variables `.woff2` (`PlusJakartaSans-VariableFont_wght.woff2` y `DMSans-VariableFont_wght.woff2`) y sus respectivos textos de licencia `OFL.txt`. |
+| `lib/tier-styles.ts` | **Nuevo módulo compartido** con `TIER_CONFIGS`, `getTierBadgeClass` y `getTierBadgeStyle` usando `var(--tier-s)`…`var(--tier-e)` y `var(--tier-fg)` para unificar los 6 colores de tier entre `dashboard.tsx`, `anime-thread.tsx` y `tier-list.tsx`. |
 | `app/login/page.tsx` | Rediseño del contenedor y tarjeta de inicio de sesión con estética cálida, emblema de comunidad, jerarquía tipográfica clara y enlace de cambio a `/registro`, manteniendo `<LoginForm />` intacto como hijo. |
 | `app/registro/page.tsx` | Rediseño del contenedor y tarjeta de registro con estética cálida, encabezado cercano y enlace a `/login`, manteniendo `<RegisterForm />` intacto como hijo. |
-| `components/site-header.tsx` | **Nuevo componente compartido** extraído de `dashboard.tsx` y `anime-thread.tsx`. Incluye logo/enlace a `/`, botón opcional "Volver al foro" (`showBackToForum`), nombre/email del usuario, badge `ADMIN`, botón exclusivo de admin "Sincronizar catálogo" con mensaje de estado/error en contexto (`role="alert"` / `role="status"`) y botón "Cerrar sesión". |
+| `components/site-header.tsx` | **Nuevo componente compartido** extraído de `dashboard.tsx` y `anime-thread.tsx`. Incluye logo/enlace a `/`, botón opcional "Volver al foro" (`showBackToForum`), nombre/email del usuario, badge `ADMIN`, botón exclusivo de admin "Actualizar catálogo" (`title="Actualizar catálogo de animes"`) con mensaje de estado/error en contexto (`role="alert"` / `role="status"`) y botón "Cerrar sesión". |
 | `components/site-footer.tsx` | **Nuevo componente compartido** de pie de página con marca, descripción de la comunidad y enlace rápido al foro. |
-| `components/dashboard.tsx` | Sustitución de la navbar propia por `<SiteHeader />` y adición de `<SiteFooter />`. Eliminación de todos los colores hex hardcodeados. Banner de bienvenida, jerarquía clara entre "Recomendar un anime" y las pestañas, tarjetas con póster compacto en móvil (`100px × 144px`) y completo en desktop (`148px × 208px`), estados vacíos amables y alertas en contexto. |
-| `components/anime-thread.tsx` | Sustitución de la navbar duplicada por `<SiteHeader showBackToForum />` y adición de `<SiteFooter />`. Rediseño de la ficha principal del anime, bloque de fundamento, reseña final del administrador, panel de moderación/veredicto admin y sección de comentarios. |
-| `components/tier-list.tsx` | Adaptación de la cuadrícula de Tier List S–E y del "Banco de animes terminados sin clasificar" a los tokens `--tier-s`…`--tier-e`, `--tier-fg` y `text-warning-border`, manteniendo el drag & drop (`@hello-pangea/dnd`) para administradores y alerta en contexto (`role="alert"`). |
-| `components/anime-search.tsx` | Rediseño del buscador con autocompletado usando `.form-field`, `.form-label`, `.field`, `.form-notice` y `.form-error`, soporte claro/oscuro y estado vacío amable. |
-| `tests/unit/site-header.test.tsx` | Pruebas unitarias para verificar el renderizado de `SiteHeader` (usuario normal vs. `ADMIN`, botón de sincronizar catálogo, "Volver al foro") y `SiteFooter`. |
-| `e2e/screenshots.spec.ts` | Generación de capturas en modo claro (`-light`) y oscuro (`-dark`) sin duplicados sin sufijo, limitando la altura de `mobile-home-*` a viewport + 1 scroll (`1688px` CSS) para mantener cada PNG muy por debajo de 1.5 MB y verificando ausencia de scroll horizontal. |
+| `components/dashboard.tsx` | Sustitución de la navbar propia por `<SiteHeader />` y adición de `<SiteFooter />`. Uso del helper compartido `lib/tier-styles.ts` para los 6 colores de tier. Selector "Ordenar por" adaptable en móvil (`w-full min-w-0 flex-1 sm:w-auto`). Tarjetas con póster compacto en móvil (`100px × 144px`) y completo en desktop (`148px × 208px`), lenguaje cercano ("Reseña final") y estados vacíos amables. |
+| `components/anime-thread.tsx` | Sustitución de la navbar duplicada por `<SiteHeader showBackToForum />` y adición de `<SiteFooter />`. Uso de `lib/tier-styles.ts` para badges de tier. Lenguaje cercano ("Reseña final", "Opiniones de la comunidad", estado vacío "Aún no hay opiniones, ¡sé el primero!") y `aria-label` descriptivos sin `(Admin)`. |
+| `components/tier-list.tsx` | Uso de `TIER_CONFIGS` desde `lib/tier-styles.ts` y de los tokens `--overlay` / `--overlay-strong` (`from-overlay-strong via-overlay`, `bg-overlay-strong`) en los degradados sobre portadas, manteniendo el drag & drop (`@hello-pangea/dnd`) para administradores. |
+| `components/anime-search.tsx` | Rediseño del buscador con autocompletado usando `.form-field`, `.form-label`, `.field`, `.form-notice` y `.form-error`, soporte claro/oscuro, sin IDs técnicos de catálogo y con estado vacío amable. |
+| `tests/unit/site-header.test.tsx` | Pruebas unitarias para verificar el renderizado de `SiteHeader` (usuario normal vs. `ADMIN`, botón "Actualizar catálogo de animes", "Volver al foro"), `SiteFooter` y el helper compartido `lib/tier-styles.ts` (tiers `S`–`E`). |
+| `e2e/screenshots.spec.ts` | Generación de capturas en modo claro (`-light`) y oscuro (`-dark`), ocultando el indicador de desarrollo de Next (`nextjs-portal{display:none!important}`) antes de cada captura, limitando `mobile-home-*` a viewport + 1 scroll (`1688px` CSS) y verificando ausencia de scroll horizontal. |
 
 ---
 
@@ -311,7 +314,7 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 - [x] **Ruta `/anime/[id]` (`app/anime/[id]/page.tsx` → `components/anime-thread.tsx`)**: Protegida con sesión, muestra detalle completo del anime, lee `?notice=already_exists` y muestra aviso amable.
 - [x] **Ruta `/login` (`app/login/page.tsx` → `components/login-form.tsx`)**: Tarjeta rediseñada conservando `<LoginForm />` intacto y los atributos `name="email"` y `name="password"`.
 - [x] **Ruta `/registro` (`app/registro/page.tsx` → `components/register-form.tsx`)**: Tarjeta rediseñada conservando `<RegisterForm />` intacto.
-- [x] **Navbar compartida (`components/site-header.tsx`)**: Logo/link a `/`, botón "Volver al foro" en `/anime/[id]`, nombre o email del usuario, badge `ADMIN`, botón admin "Sincronizar catálogo" (`/api/admin/sync-catalog`) y botón "Cerrar sesión".
+- [x] **Navbar compartida (`components/site-header.tsx`)**: Logo/link a `/`, botón "Volver al foro" en `/anime/[id]`, nombre o email del usuario, badge `ADMIN`, botón admin "Actualizar catálogo" (`/api/admin/sync-catalog`) y botón "Cerrar sesión".
 - [x] **Footer compartido (`components/site-footer.tsx`)**: Presente en el foro y en el detalle de anime.
 - [x] **Panel "Recomendar un anime" (`components/dashboard.tsx` + `components/anime-search.tsx`)**: Buscador con autocompletado contra `/api/catalog/search`, verificación de duplicados con `/api/recommendations/check` (y redirección a `/anime/[id]?notice=already_exists`), selección de anime, textarea de fundamento y publicación vía `POST /api/recommendations`.
 - [x] **Pestañas en Home (`components/dashboard.tsx`)**: `Foro de Debate`, `Viendo Actualmente` (con contador) y `Mi Tier List`.
@@ -319,7 +322,7 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 - [x] **Tarjetas de Anime en el Foro (`components/dashboard.tsx`)**: Portada con enlace al hilo, título, autor, fecha, votar/quitar voto (`POST /api/recommendations/[id]/vote`), contador de comentarios, enlace "Entrar al debate", eliminar recomendación con `window.confirm` (autor sin comentarios o admin) y selectores rápidos de `tier` y `status` para admin (`PATCH /api/recommendations/[id]`).
 - [x] **Pestaña "Viendo Actualmente" (`components/dashboard.tsx`)**: Cuadrícula de series en estado `WATCHING` con enlace al debate y estado vacío amable.
 - [x] **Pestaña "Mi Tier List" (`components/tier-list.tsx`)**: Tablero S–E estático para usuarios y con drag & drop (`@hello-pangea/dnd`) para admin, banco de series `COMPLETED` sin clasificar y persistencia en `/api/recommendations/reorder-tier`.
-- [x] **Detalle de Anime (`components/anime-thread.tsx`)**: Portada destacada, botón externo "Ver en MyAnimeList", votar, eliminar con `window.confirm`, edición rápida admin de estado/tier, bloque de fundamento del autor, bloque de "Reseña Final del Administrador", panel de edición de veredicto admin (`tier`, `status`, `adminReview`), formulario de nuevo comentario y listado de comentarios con borrado (`DELETE /api/comments/[id]`).
+- [x] **Detalle de Anime (`components/anime-thread.tsx`)**: Portada destacada, botón externo "Ver en MyAnimeList", votar, eliminar con `window.confirm`, edición rápida admin de estado/tier, bloque de fundamento del autor, bloque de "Reseña final", panel de edición de reseña final y estado (`tier`, `status`, `adminReview`), formulario de nuevo comentario y listado de "Opiniones de la comunidad" con borrado (`DELETE /api/comments/[id]`).
 
 ---
 
@@ -359,3 +362,39 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 | `npm run lint` | **PASS** (exit 0) | `0 errors, 3 warnings` (warnings preexistentes en `app/api/admin/sync-catalog/route.ts` y `scripts/populate-catalog.js`). |
 | `npm test` | **PASS** (exit 0) | `2 passed (2)` archivos, `4 passed (4)` tests. |
 | `E2E_PORT=3102 npx playwright test e2e/screenshots.spec.ts` | **PASS** (exit 0) | `6 passed` en `desktop` y `mobile`, generando las 12 capturas en `docs/opinaanime-redesign/screenshots/after/`. |
+
+---
+
+## 9. Ronda 2 de correcciones
+
+### 9.1 Resumen de correcciones aplicadas
+1. **Unificación de Badges de Tier (`lib/tier-styles.ts`)**:
+   - Se extrajo `lib/tier-styles.ts` con `TIER_CONFIGS`, `getTierBadgeClass` y `getTierBadgeStyle` utilizando `var(--tier-s)`…`var(--tier-e)` y `var(--tier-fg)` (con contraste AA ≥ 5.02:1 en los 6 niveles).
+   - Se eliminaron las funciones duplicadas `getTierBadgeClass` de `components/dashboard.tsx` y `components/anime-thread.tsx` y la constante duplicada `TIER_CONFIGS` de `components/tier-list.tsx`, de modo que los tres componentes usan exactamente los mismos 6 colores semánticos de tier.
+2. **Separación de palabras en fuente de display (`Plus Jakarta Sans` + `tracking-tight`)**:
+   - **Causa raíz**: El archivo `PlusJakartaSans-VariableFont_wght.woff2` sí incluye el glifo `U+0020` (espacio), pero su avance horizontal en la tabla `hmtx` para peso `800` es de solo `180/1000` (`0.18em`, frente a `0.24em–0.27em` en `DM Sans`). Al combinarlo con `tracking-tight` (`letter-spacing: -0.025em`), que en CSS también se descuenta del carácter espacio, el ancho efectivo entre palabras caía a `0.155em` (~`2.8px` a `18px`), haciendo que las palabras se vieran pegadas.
+   - **Solución**: En `app/globals.css`, se añadió `word-spacing: 0.1em` a la regla `h1, h2, h3, h4, .font-display`, restaurando una separación entre palabras natural (`~0.255em` incluso con `tracking-tight`) y verificada visualmente en las capturas.
+3. **Selector "Ordenar por" adaptable en móvil (`390px`)**:
+   - En `components/dashboard.tsx`, el contenedor del selector pasó a `min-w-0 sm:shrink-0` y el `<select>` a `select w-full min-w-0 flex-1 sm:w-auto sm:flex-initial`, manteniéndose completamente dentro de su tarjeta en `390px`.
+4. **Tokens `--overlay` y `--overlay-strong` en `components/tier-list.tsx`**:
+   - Se definieron `--overlay: rgb(18 17 16 / 0.65)` y `--overlay-strong: rgb(18 17 16 / 0.90)` en `:root` de `app/globals.css` y se expusieron en `@theme inline` (`--color-overlay`, `--color-overlay-strong`).
+   - En `components/tier-list.tsx`, se reemplazaron `from-black/90 via-black/60` y `bg-black/75` por `from-overlay-strong via-overlay` y `bg-overlay-strong`.
+5. **Lenguaje cercano y accesible en toda la interfaz**:
+   - En `components/site-header.tsx`, se cambió `"Sincronizar catálogo con Kitsu API"` por `"Actualizar catálogo de animes"` (`title` y `aria-label`) y el texto visible del botón a `"Actualizar catálogo"`.
+   - Se eliminó `(Admin)` de los atributos `aria-label` y `title` en `components/anime-thread.tsx` y `components/dashboard.tsx`, describiendo directamente la acción (`Cambiar Tier de ...`, `Cambiar estado de ...`).
+   - Se unificó `"Veredicto"` como `"Reseña final"` en `components/dashboard.tsx` y `components/anime-thread.tsx` (badge `"Reseña final"`, `"Reseña final: Tier X"`, sección `"Editar reseña final y estado"`, botón `"Guardar reseña final"`).
+   - Se cambió `"Hilos de Debate"` en la sección de comentarios de `components/anime-thread.tsx` por `"Opiniones de la comunidad"`, manteniendo el estado vacío `"Aún no hay opiniones, ¡sé el primero!"`.
+   - Se eliminó la jerga técnica `Catálogo #externalId` / `#externalId` en `components/dashboard.tsx` y `components/anime-search.tsx`.
+6. **Ocultación del indicador de desarrollo de Next en capturas E2E**:
+   - En `e2e/screenshots.spec.ts`, dentro de `shot()`, se inyecta `await page.addStyleTag({ content: "nextjs-portal{display:none!important}" })` antes de tomar cada captura sin tocar `next.config`.
+
+### 9.2 Resultados Reales de Verificación (Ronda 2)
+
+| Comando | Resultado | Detalle |
+|---|---|---|
+| `npm run build` | **PASS** (exit 0) | `prisma generate && next build` completado sin errores (11/11 páginas). |
+| `npm run typecheck` | **PASS** (exit 0) | `tsc --noEmit` sin errores. |
+| `npm run lint` | **PASS** (exit 0) | `0 errors, 3 warnings` (warnings preexistentes en `app/api/admin/sync-catalog/route.ts` y `scripts/populate-catalog.js`). |
+| `npm test` | **PASS** (exit 0) | `2 passed (2)` archivos, `5 passed (5)` tests. |
+| `E2E_PORT=3102 SHOT_DIR=/tmp/opinaanime-r2-shots npx playwright test e2e/screenshots.spec.ts` | **PASS** (exit 0) | `6 passed (19.7s)` en `desktop` y `mobile` hacia directorio temporal fuera de `docs/`. |
+
