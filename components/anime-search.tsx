@@ -72,6 +72,7 @@ export default function AnimeSearch({ onSelectAnime, disabled = false }: AnimeSe
         const data = await res.json();
         const rawItems = Array.isArray(data) ? data : data.data || [];
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload mixto de /api/catalog/search y /api/anime/search sin tipar
         const formatted: CatalogAnime[] = rawItems.map((item: any) => ({
           id: item.id,
           externalId: item.externalId,

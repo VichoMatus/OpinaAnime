@@ -537,7 +537,7 @@ export default function AnimeThread({
                 )}
               </div>
               <p className="text-zinc-200 text-base leading-relaxed italic bg-[#121318] p-5 rounded-lg border border-[#22242a]">
-                "{item.adminReview}"
+                &quot;{item.adminReview}&quot;
               </p>
             </div>
           )}

@@ -580,7 +580,7 @@ export default function Dashboard({
                     </label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
+                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                       className="bg-[#121318] border border-[#22242a] rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                     >
                       <option value="votados">Más me gusta / apoyados</option>

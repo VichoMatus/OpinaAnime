@@ -72,7 +72,9 @@ export async function GET(request: Request) {
             type: string | null;
             year: number | null;
           }[] = media
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- respuesta JSON externa (AniList) sin tipar; tiparla no es trivial
             .filter((m: any) => m && (m.title?.english || m.title?.romaji) && (m.coverImage?.large || m.coverImage?.extraLarge))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- respuesta JSON externa (AniList) sin tipar; tiparla no es trivial
             .map((m: any) => {
               const title = m.title?.english || m.title?.romaji;
               const titleEn = m.title?.english || null;
