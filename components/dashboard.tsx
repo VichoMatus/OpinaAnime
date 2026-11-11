@@ -495,7 +495,7 @@ export default function Dashboard({
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                       activeTab === "foro"
-                        ? "bg-white/20 text-white"
+                        ? "bg-primary-fg/20 text-primary-fg"
                         : "bg-surface-subtle text-fg-muted"
                     }`}
                   >
@@ -519,7 +519,7 @@ export default function Dashboard({
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                         activeTab === "viendo"
-                          ? "bg-white/20 text-white"
+                          ? "bg-primary-fg/20 text-primary-fg"
                           : "bg-info-soft text-info border border-info-border"
                       }`}
                     >
@@ -653,7 +653,7 @@ export default function Dashboard({
                           <span
                             className={`rounded-full px-1.5 py-0.2 text-[11px] font-mono ${
                               isSelected
-                                ? "bg-white/25 text-white"
+                                ? "bg-primary-fg/25 text-primary-fg"
                                 : "bg-surface text-fg-subtle"
                             }`}
                           >
@@ -702,11 +702,11 @@ export default function Dashboard({
                           key={item.id}
                           className="group rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-card hover:shadow-elevated hover:border-border-strong transition-all"
                         >
-                          <div className="grid gap-5 sm:grid-cols-[148px_1fr]">
+                          <div className="grid grid-cols-[100px_1fr] gap-3.5 sm:gap-5 sm:grid-cols-[148px_1fr]">
                             {/* Portada Protagonista */}
                             <Link
                               href={`/anime/${item.id}`}
-                              className="relative overflow-hidden rounded-xl bg-surface-subtle aspect-[3/4] sm:aspect-auto sm:h-52 border border-border block shadow-card shrink-0 focus-visible:outline-2 focus-visible:outline-ring"
+                              className="relative overflow-hidden rounded-xl bg-surface-subtle h-36 sm:h-52 border border-border block shadow-card shrink-0 focus-visible:outline-2 focus-visible:outline-ring"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img

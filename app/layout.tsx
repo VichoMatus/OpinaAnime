@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const headingFont = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+const headingFont = localFont({
+  src: "./fonts/plus-jakarta-sans/PlusJakartaSans-VariableFont_wght.woff2",
+  weight: "400 800",
+  style: "normal",
   variable: "--font-heading",
   display: "swap",
 });
 
-const bodyFont = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const bodyFont = localFont({
+  src: "./fonts/dm-sans/DMSans-VariableFont_wght.woff2",
+  weight: "400 700",
+  style: "normal",
   variable: "--font-body",
   display: "swap",
 });

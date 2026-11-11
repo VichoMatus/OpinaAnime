@@ -42,12 +42,12 @@ interface TierConfig {
 }
 
 const TIER_CONFIGS: TierConfig[] = [
-  { name: "S", subtitle: "Obra maestra", badgeStyle: { backgroundColor: "#DC2626", color: "#FFFFFF" } },
-  { name: "A", subtitle: "Excelente", badgeStyle: { backgroundColor: "#EA580C", color: "#FFFFFF" } },
-  { name: "B", subtitle: "Muy bueno", badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
-  { name: "C", subtitle: "Entretenido", badgeStyle: { backgroundColor: "#CA8A04", color: "#FFFFFF" } },
-  { name: "D", subtitle: "Regular", badgeStyle: { backgroundColor: "#16A34A", color: "#FFFFFF" } },
-  { name: "E", subtitle: "Flojo", badgeStyle: { backgroundColor: "#0D9488", color: "#FFFFFF" } },
+  { name: "S", subtitle: "Obra maestra", badgeStyle: { backgroundColor: "var(--tier-s)", color: "var(--tier-fg)" } },
+  { name: "A", subtitle: "Excelente", badgeStyle: { backgroundColor: "var(--tier-a)", color: "var(--tier-fg)" } },
+  { name: "B", subtitle: "Muy bueno", badgeStyle: { backgroundColor: "var(--tier-b)", color: "var(--tier-fg)" } },
+  { name: "C", subtitle: "Entretenido", badgeStyle: { backgroundColor: "var(--tier-c)", color: "var(--tier-fg)" } },
+  { name: "D", subtitle: "Regular", badgeStyle: { backgroundColor: "var(--tier-d)", color: "var(--tier-fg)" } },
+  { name: "E", subtitle: "Flojo", badgeStyle: { backgroundColor: "var(--tier-e)", color: "var(--tier-fg)" } },
 ];
 
 export default function TierList({
@@ -313,7 +313,7 @@ export default function TierList({
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2 pt-5 opacity-95 group-hover:opacity-100 transition-opacity">
-                          <span className="block text-[11px] text-white font-semibold line-clamp-2 leading-tight">
+                          <span className="block text-[11px] text-tier-fg font-semibold line-clamp-2 leading-tight">
                             {item.title}
                           </span>
                         </div>
@@ -421,10 +421,10 @@ export default function TierList({
                                   if (dragSnapshot.isDragging) e.preventDefault();
                                 }}
                               >
-                                <span className="text-[11px] text-white font-semibold line-clamp-2 leading-tight">
+                                <span className="text-[11px] text-tier-fg font-semibold line-clamp-2 leading-tight">
                                   {item.title}
                                 </span>
-                                <span className="text-[10px] text-amber-300 underline font-semibold">
+                                <span className="text-[10px] text-warning-border underline font-semibold">
                                   Ver debate →
                                 </span>
                               </Link>
@@ -509,10 +509,10 @@ export default function TierList({
                               if (dragSnapshot.isDragging) e.preventDefault();
                             }}
                           >
-                            <span className="text-[11px] text-white font-semibold line-clamp-2 leading-tight">
+                            <span className="text-[11px] text-tier-fg font-semibold line-clamp-2 leading-tight">
                               {item.title}
                             </span>
-                            <span className="text-[10px] text-amber-300 underline font-semibold">
+                            <span className="text-[10px] text-warning-border underline font-semibold">
                               Ver debate →
                             </span>
                           </Link>
