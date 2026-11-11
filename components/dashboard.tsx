@@ -59,9 +59,12 @@ interface DashboardProps {
 const statusLabels: Record<string, string> = STATUS_LABELS;
 
 const RECOMMENDED_FILTER = "RECOMMENDED";
+/** Mismas recomendaciones, pero de la más nueva a la más antigua. */
+const RECENT_FILTER = "RECENT";
 
 const filterTabs = [
   { label: "Recomendaciones", value: RECOMMENDED_FILTER },
+  { label: "Recientes", value: RECENT_FILTER },
   { label: "Lo veré", value: "PENDING" },
   { label: "Viendo", value: "WATCHING" },
   { label: "Terminados", value: "COMPLETED" },
@@ -290,6 +293,7 @@ export default function Dashboard({
   // Filtrado y ordenamiento en tiempo real para el Foro
   let processedItems = items.filter((item) => {
     if (statusFilter === "ALL") return true;
+    if (statusFilter === RECENT_FILTER) return item.status === RECOMMENDED_FILTER;
     return item.status === statusFilter;
   });
 
@@ -303,8 +307,14 @@ export default function Dashboard({
     );
   }
 
-  // En "Recomendaciones" siempre se ordena por me gusta.
-  const effectiveSort = statusFilter === RECOMMENDED_FILTER ? "votados" : sortBy;
+  // "Recomendaciones" siempre se ordena por me gusta y "Recientes" por fecha.
+  const isRecommendedView = statusFilter === RECOMMENDED_FILTER || statusFilter === RECENT_FILTER;
+  const effectiveSort =
+    statusFilter === RECOMMENDED_FILTER
+      ? "votados"
+      : statusFilter === RECENT_FILTER
+        ? "recientes"
+        : sortBy;
 
   processedItems.sort((a, b) => {
     if (effectiveSort === "vistos") {
@@ -605,9 +615,11 @@ export default function Dashboard({
                       )}
                     </div>
 
-                    {statusFilter === RECOMMENDED_FILTER ? (
+                    {isRecommendedView ? (
                       <p className="text-xs sm:text-sm font-semibold text-fg-muted sm:shrink-0">
-                        Ordenadas por más me gusta
+                        {statusFilter === RECENT_FILTER
+                          ? "Ordenadas de la más nueva a la más antigua"
+                          : "Ordenadas por más me gusta"}
                       </p>
                     ) : (
                     <div className="flex items-center gap-2 min-w-0 sm:shrink-0">
@@ -643,7 +655,9 @@ export default function Dashboard({
                       const count =
                         tab.value === "ALL"
                           ? items.length
-                          : items.filter((i) => i.status === tab.value).length;
+                          : tab.value === RECENT_FILTER
+                            ? items.filter((i) => i.status === RECOMMENDED_FILTER).length
+                            : items.filter((i) => i.status === tab.value).length;
                       const isSelected = statusFilter === tab.value;
 
                       return (
@@ -680,14 +694,14 @@ export default function Dashboard({
                       <p className="text-base font-bold text-fg">
                         {searchQuery
                           ? `No encontramos ningún anime que coincida con "${searchQuery}".`
-                          : statusFilter === RECOMMENDED_FILTER
+                          : isRecommendedView
                             ? "Aún no hay recomendaciones nuevas."
                             : "Aún no hay animes en esta categoría."}
                       </p>
                       <p className="mt-1.5 text-sm text-fg-muted">
                         {searchQuery
                           ? "Prueba buscando con otras palabras o limpia el filtro para ver todas las recomendaciones."
-                          : statusFilter === RECOMMENDED_FILTER && !isAdmin
+                          : isRecommendedView && !isAdmin
                             ? `¡Sé el primero en recomendarle algo a ${OWNER_NAME} con el buscador!`
                             : "Cuando haya animes aquí, los verás en esta lista."}
                       </p>

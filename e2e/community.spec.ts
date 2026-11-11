@@ -25,6 +25,13 @@ test("un usuario normal ve el título para recomendar y la categoría Recomendac
   expect(text).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
 });
 
+test("la categoría Recientes muestra las recomendaciones de la más nueva a la más antigua", async ({ page }) => {
+  await registerAndLogin(page);
+  await page.getByRole("button", { name: /^Recientes/ }).click();
+  await expect(page.getByText("Ordenadas de la más nueva a la más antigua")).toBeVisible();
+  await expect(page.getByRole("link", { name: /entrar al debate/i }).first()).toBeVisible();
+});
+
 test("las recomendaciones exigen un mínimo de caracteres", async ({ page }) => {
   await registerAndLogin(page);
   const res = await page.request.post("/api/recommendations", {
