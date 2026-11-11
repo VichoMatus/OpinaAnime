@@ -370,7 +370,7 @@ export default function AnimeThread({
             <div className="flex flex-col justify-between min-w-0">
               <div>
                 {/* Cabecera del Anime */}
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3.5 border-b border-border pb-5">
                   <div className="min-w-0 flex-1">
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
                       {item.title}
@@ -384,7 +384,7 @@ export default function AnimeThread({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {/* Botón de Voto / Me gusta */}
                     <button
                       type="button"

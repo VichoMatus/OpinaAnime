@@ -244,3 +244,52 @@ Definidas en `app/globals.css` bajo `@layer components` para ser usadas tanto en
 |                     +---------------------------------------+                     |
 +-----------------------------------------------------------------------------------+
 ```
+
+---
+
+## 6. Lista de Cambios por Archivo
+
+| Archivo | Cambios realizados |
+|---|---|
+| `app/globals.css` | Definición de variables CSS para modo claro (`:root`, `[data-theme="light"]`) y modo oscuro (`@media (prefers-color-scheme: dark)`, `[data-theme="dark"]`). Exposición de tokens a Tailwind CSS v4 con `@theme inline` (`bg`, `surface`, `surface-subtle`, `surface-elevated`, `fg`, `fg-muted`, `fg-subtle`, `primary`, `border`, `ring`, `danger`, `success`, `warning`, `info`, radios y sombras). Creación en `@layer components` de las clases semánticas de contrato: `.form-stack`, `.form-field`, `.form-label`, `.field` (`.field-dark`, `.field-light`), `.password-field`, `.password-toggle`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.form-error`, `.form-notice` y `.select`. |
+| `app/layout.tsx` | Eliminación de `className="dark"` fijo y del color hex `#0b0f19`. Configuración de las fuentes `Plus_Jakarta_Sans` (`--font-heading`) y `DM_Sans` (`--font-body`) mediante `next/font/google`. Uso de `bg-bg text-fg`. |
+| `app/login/page.tsx` | Rediseño del contenedor y tarjeta de inicio de sesión con estética cálida, emblema de comunidad, jerarquía tipográfica clara y enlace de cambio a `/registro`, manteniendo `<LoginForm />` intacto como hijo. |
+| `app/registro/page.tsx` | Rediseño del contenedor y tarjeta de registro con estética cálida, encabezado cercano y enlace a `/login`, manteniendo `<RegisterForm />` intacto como hijo. |
+| `components/site-header.tsx` | **Nuevo componente compartido** extraído de `dashboard.tsx` y `anime-thread.tsx`. Incluye logo/enlace a `/`, botón opcional "Volver al foro" (`showBackToForum`), nombre/email del usuario, badge `ADMIN`, botón exclusivo de admin "Sincronizar catálogo" con mensaje de estado/error en contexto (`role="alert"` / `role="status"`) y botón "Cerrar sesión". |
+| `components/site-footer.tsx` | **Nuevo componente compartido** de pie de página con marca, descripción de la comunidad y enlace rápido al foro. |
+| `components/dashboard.tsx` | Sustitución de la navbar propia por `<SiteHeader />` y adición de `<SiteFooter />`. Eliminación de todos los colores hex hardcodeados (`#0a0b0e`, `#121318`, `#22242a`, `#1f2128`, `#181920`). Incorporación de banner de bienvenida con contadores de comunidad, jerarquía clara entre el panel "Recomendar un anime" y las pestañas (`Foro de Debate`, `Viendo Actualmente`, `Mi Tier List`), tarjetas con portadas protagonistas, estados vacíos amables y reemplazo de `alert()` por alertas en contexto (`role="alert"`), conservando `window.confirm`. |
+| `components/anime-thread.tsx` | Sustitución de la navbar duplicada por `<SiteHeader showBackToForum />` y adición de `<SiteFooter />`. Rediseño de la ficha principal del anime, bloque de fundamento, reseña final del administrador, panel de moderación/veredicto admin y sección de comentarios. Estado vacío amable ("Aún no hay opiniones, ¡sé el primero!") y reemplazo de `alert()` por alertas en contexto (`role="alert"`), conservando `window.confirm`. |
+| `components/tier-list.tsx` | Adaptación de la cuadrícula de Tier List S–E y del "Banco de animes terminados sin clasificar" a los tokens cálidos en modo claro y oscuro, manteniendo el drag & drop (`@hello-pangea/dnd`) para administradores y reemplazando `alert()` de error de sincronización por alerta en contexto (`role="alert"`). |
+| `components/anime-search.tsx` | Rediseño del buscador con autocompletado usando `.form-field`, `.form-label`, `.field`, `.form-notice` y `.form-error`, soporte claro/oscuro y estado vacío amable cuando una búsqueda no arroja resultados. |
+| `tests/unit/site-header.test.tsx` | Pruebas unitarias para verificar el renderizado de `SiteHeader` (usuario normal vs. `ADMIN`, botón de sincronizar catálogo, "Volver al foro") y `SiteFooter`. |
+| `e2e/screenshots.spec.ts` | Ampliación del spec para capturar `login` y `home` tanto en modo claro (`colorScheme: "light"`) como en modo oscuro (`colorScheme: "dark"`) en `desktop` (1440x900) y `mobile` (390x844), además de verificar automáticamente la ausencia de scroll horizontal (`document.documentElement.scrollWidth <= window.innerWidth`). |
+
+---
+
+## 7. Checklist del Inventario (BRIEF §2)
+
+- [x] **Ruta `/` (`app/page.tsx` → `components/dashboard.tsx`)**: Protegida con sesión, carga todas las recomendaciones y renderiza el foro principal.
+- [x] **Ruta `/anime/[id]` (`app/anime/[id]/page.tsx` → `components/anime-thread.tsx`)**: Protegida con sesión, muestra detalle completo del anime, lee `?notice=already_exists` y muestra aviso amable.
+- [x] **Ruta `/login` (`app/login/page.tsx` → `components/login-form.tsx`)**: Tarjeta rediseñada conservando `<LoginForm />` intacto y los atributos `name="email"` y `name="password"`.
+- [x] **Ruta `/registro` (`app/registro/page.tsx` → `components/register-form.tsx`)**: Tarjeta rediseñada conservando `<RegisterForm />` intacto.
+- [x] **Navbar compartida (`components/site-header.tsx`)**: Logo/link a `/`, botón "Volver al foro" en `/anime/[id]`, nombre o email del usuario, badge `ADMIN`, botón admin "Sincronizar catálogo" (`/api/admin/sync-catalog`) y botón "Cerrar sesión".
+- [x] **Footer compartido (`components/site-footer.tsx`)**: Presente en el foro y en el detalle de anime.
+- [x] **Panel "Recomendar un anime" (`components/dashboard.tsx` + `components/anime-search.tsx`)**: Buscador con autocompletado contra `/api/catalog/search`, verificación de duplicados con `/api/recommendations/check` (y redirección a `/anime/[id]?notice=already_exists`), selección de anime, textarea de fundamento y publicación vía `POST /api/recommendations`.
+- [x] **Pestañas en Home (`components/dashboard.tsx`)**: `Foro de Debate`, `Viendo Actualmente` (con contador) y `Mi Tier List`.
+- [x] **Foro — Búsqueda, Orden y Filtros (`components/dashboard.tsx`)**: Búsqueda en tiempo real por título o autor, selector de orden (`votados`, `recientes`, `vistos`, `viendo`, `comentados`, `tier`) y chips de filtro por estado (`ALL`, `COMPLETED`, `WATCHING`, `PENDING`, `DROPPED`) con contadores.
+- [x] **Tarjetas de Anime en el Foro (`components/dashboard.tsx`)**: Portada con enlace al hilo, título, autor, fecha, votar/quitar voto (`POST /api/recommendations/[id]/vote`), contador de comentarios, enlace "Entrar al debate", eliminar recomendación con `window.confirm` (autor sin comentarios o admin) y selectores rápidos de `tier` y `status` para admin (`PATCH /api/recommendations/[id]`).
+- [x] **Pestaña "Viendo Actualmente" (`components/dashboard.tsx`)**: Cuadrícula de series en estado `WATCHING` con enlace al debate y estado vacío amable.
+- [x] **Pestaña "Mi Tier List" (`components/tier-list.tsx`)**: Tablero S–E estático para usuarios y con drag & drop (`@hello-pangea/dnd`) para admin, banco de series `COMPLETED` sin clasificar y persistencia en `/api/recommendations/reorder-tier`.
+- [x] **Detalle de Anime (`components/anime-thread.tsx`)**: Portada destacada, botón externo "Ver en MyAnimeList", votar, eliminar con `window.confirm`, edición rápida admin de estado/tier, bloque de fundamento del autor, bloque de "Reseña Final del Administrador", panel de edición de veredicto admin (`tier`, `status`, `adminReview`), formulario de nuevo comentario y listado de comentarios con borrado (`DELETE /api/comments/[id]`).
+
+---
+
+## 8. Resultados Reales de Verificación
+
+| Comando | Resultado | Detalle |
+|---|---|---|
+| `npm run typecheck` | **PASS** (exit 0) | `tsc --noEmit` sin errores de tipos. |
+| `npm run lint` | **PASS** (exit 0) | `0 errors, 3 warnings` (los 3 warnings pertenecen a `app/api/admin/sync-catalog/route.ts` y `scripts/populate-catalog.js`, archivos fuera del alcance de edición). Cero warnings en todos los archivos tocados. |
+| `npm test` | **PASS** (exit 0) | `2 passed (2)` archivos de test (`tests/unit/icons.test.tsx` y `tests/unit/site-header.test.tsx`), `4 passed (4)` tests en total. |
+| `npm run build` | **PASS** (exit 0) | `prisma generate && next build` completado exitosamente con las 11 rutas compiladas. |
+| `E2E_PORT=3102 npx playwright test e2e/screenshots.spec.ts` | **PASS** (exit 0) | `6 passed (36.1s)` en proyectos `desktop` (1440x900) y `mobile` (390x844), incluyendo verificación sin scroll horizontal y capturas en modo claro y oscuro. |

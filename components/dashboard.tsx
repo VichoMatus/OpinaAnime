@@ -720,11 +720,11 @@ export default function Dashboard({
                             <div className="flex flex-col justify-between min-w-0">
                               <div>
                                 {/* Encabezado: Título, Autor y Badges */}
-                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5">
                                   <div className="min-w-0 flex-1">
                                     <Link
                                       href={`/anime/${item.id}`}
-                                      className="font-display text-xl font-extrabold text-fg hover:text-primary transition-colors line-clamp-2 focus-visible:outline-2 focus-visible:outline-ring rounded"
+                                      className="font-display text-lg sm:text-xl font-extrabold text-fg hover:text-primary transition-colors line-clamp-2 focus-visible:outline-2 focus-visible:outline-ring rounded"
                                     >
                                       {item.title}
                                     </Link>
@@ -744,7 +744,7 @@ export default function Dashboard({
                                     </p>
                                   </div>
 
-                                  <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                                     {isAdmin ? (
                                       <div className="flex flex-wrap items-center gap-1.5">
                                         <select

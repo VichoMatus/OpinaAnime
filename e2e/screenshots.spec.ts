@@ -31,6 +31,13 @@ test.beforeAll(async () => {
   }
 });
 
+async function assertNoHorizontalOverflow(page: Page) {
+  const hasOverflow = await page.evaluate(() => {
+    return document.documentElement.scrollWidth > window.innerWidth;
+  });
+  expect(hasOverflow, `Scroll horizontal detectado en ${page.url()}`).toBe(false);
+}
+
 async function settle(page: Page) {
   await page.waitForLoadState("networkidle");
   // Recorre la página para disparar imágenes lazy y espera a que todas terminen de cargar.
@@ -52,6 +59,7 @@ async function settle(page: Page) {
     );
   });
   await page.waitForLoadState("networkidle");
+  await assertNoHorizontalOverflow(page);
 }
 
 async function shot(page: Page, name: string) {
@@ -69,13 +77,19 @@ async function login(page: Page) {
 }
 
 test.describe("capturas sin sesión", () => {
-  test("login", async ({ page }) => {
+  test("login (claro y oscuro)", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/login");
     await expect(page.locator('input[name="email"]')).toBeVisible();
     await shot(page, "login");
+    await shot(page, "login-light");
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await shot(page, "login-dark");
   });
 
   test("registro", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/registro");
     await expect(page.locator('input[name="email"]')).toBeVisible();
     await shot(page, "registro");
@@ -83,11 +97,17 @@ test.describe("capturas sin sesión", () => {
 });
 
 test.describe("capturas con sesión", () => {
-  test("home y detalle", async ({ page }) => {
+  test("home (claro y oscuro) y detalle", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
     await login(page);
     await expect(page.getByText("Sousou no Frieren").first()).toBeVisible();
     await shot(page, "home");
+    await shot(page, "home-light");
 
+    await page.emulateMedia({ colorScheme: "dark" });
+    await shot(page, "home-dark");
+
+    await page.emulateMedia({ colorScheme: "light" });
     await page.goto(`/anime/${detailId}`);
     await expect(page.getByText("Sousou no Frieren").first()).toBeVisible();
     await shot(page, "detalle");
