@@ -4,8 +4,7 @@ export function safeRedirect(url: string, baseUrl: string): string {
     const base = new URL(baseUrl);
     const resolved = new URL(url, base);
     if (resolved.origin !== base.origin) return baseUrl;
-    if (url.startsWith("/")) return `${resolved.pathname}${resolved.search}${resolved.hash}`;
-    return resolved.toString();
+    return resolved.href;
   } catch {
     // URLs inválidas vuelven al origen de la aplicación.
   }

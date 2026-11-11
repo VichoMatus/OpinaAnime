@@ -14,13 +14,11 @@ export async function POST(request: Request) {
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    return NextResponse.json({ error: "Escribe un correo válido (máximo 254 caracteres)." }, { status: 400 });
-  }
+  if (email.length > 254) return NextResponse.json({ error: "Ese correo es demasiado largo." }, { status: 400 });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Revisa tu correo, parece que no es válido." }, { status: 400 });
   const passwordBytes = Buffer.byteLength(password, "utf8");
-  if (passwordBytes < 8 || passwordBytes > 72) {
-    return NextResponse.json({ error: "La contraseña debe tener entre 8 y 72 bytes." }, { status: 400 });
-  }
+  if (passwordBytes < 8) return NextResponse.json({ error: "Tu contraseña debe tener al menos 8 caracteres." }, { status: 400 });
+  if (passwordBytes > 72) return NextResponse.json({ error: "Tu contraseña es demasiado larga (máximo 72 caracteres; los emojis y las tildes cuentan más)." }, { status: 400 });
   if (name.length > 60) return NextResponse.json({ error: "El nombre puede tener hasta 60 caracteres." }, { status: 400 });
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return NextResponse.json({ error: "Ese correo ya está registrado." }, { status: 409 });

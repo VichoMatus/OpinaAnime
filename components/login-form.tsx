@@ -18,7 +18,14 @@ export default function LoginForm() {
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email") ?? "");
     const password = String(data.get("password") ?? "");
-    const result = await signIn("credentials", { email, password, redirect: false });
+    let result;
+    try {
+      result = await signIn("credentials", { email, password, redirect: false });
+    } catch {
+      setError("No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.");
+      setBusy(false);
+      return;
+    }
     if (result?.error) {
       setError("Correo o contraseña incorrectos.");
       setBusy(false);

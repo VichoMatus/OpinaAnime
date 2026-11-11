@@ -1,5 +1,16 @@
 # Notas de autenticación
 
+## Ronda 2
+
+- `lib/safe-redirect.ts`: retorna la URL absoluta después de validar el origen; esto evita que rutas normalizadas como `/.//evil.com` se conviertan en `Location: //evil.com`. Las pruebas cubren los casos reportados y verifican el origen para una lista amplia de entradas.
+- `e2e/auth.spec.ts`: prueba contra el servidor real `/api/auth/csrf` y `POST /api/auth/signout` con `callbackUrl=/.//evil.com`, validando que la URL resultante conserva el origen.
+- `components/login-form.tsx`: captura fallos de red al llamar `signIn`, presenta un mensaje amable y habilita el botón de nuevo.
+- `components/register-form.tsx`: valida el tamaño UTF-8 de la contraseña antes de enviar, conserva el máximo suave del campo y usa mensajes sin jerga técnica.
+- `app/api/register/route.ts`: diferencia email inválido de email demasiado largo; comunica los límites de contraseña sin mencionar bytes.
+- Se añadieron pruebas unitarias para los errores de red, el límite UTF-8, y los textos de validación de la API.
+- Verificación de esta ronda: `npm run build` PASS; `npm run typecheck` PASS; `npm run lint` PASS con 0 errores y 12 warnings; `npm test` PASS con 5 archivos y 54 tests.
+- `E2E_PORT=3101 npx playwright test e2e/auth.spec.ts`: 2 passed y 4 failed (6 tests en total). Los dos casos de redirect nuevo pasan en desktop y mobile; los otros cuatro fallan al buscar `/cerrar sesión/i`, mientras que el botón actual del header dice “Salir” (incluye dos tests de logout en cada proyecto).
+
 ## Ronda 1 de correcciones
 
 - `lib/safe-redirect.ts`: bloquea caracteres de control y espacios, y valida el origen de la URL ya resuelta antes de conservar una ruta interna o URL del mismo origen.

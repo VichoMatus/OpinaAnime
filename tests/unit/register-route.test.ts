@@ -17,9 +17,24 @@ describe("POST /api/register validation", () => {
     }));
   }
 
-  it.each(["@", "a@", "x y@z", `${"a".repeat(243)}@example.com`])("rechaza el correo %s", async (email) => {
+  it.each(["@", "a@", "x y@z"]) ("rechaza el correo inválido %s con el mensaje esperado", async (email) => {
     const response = await post({ email, password: "password" });
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Revisa tu correo, parece que no es válido." });
+    expect(mocks.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("indica cuando el correo supera 254 caracteres", async () => {
+    const response = await post({ email: `${"a".repeat(243)}@example.com`, password: "password" });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Ese correo es demasiado largo." });
+  });
+
+  it("usa mensajes claros según la longitud de la contraseña", async () => {
+    const short = await post({ email: "valid@example.com", password: "short" });
+    expect(await short.json()).toEqual({ error: "Tu contraseña debe tener al menos 8 caracteres." });
+    const long = await post({ email: "valid@example.com", password: "á".repeat(37) });
+    expect(await long.json()).toEqual({ error: "Tu contraseña es demasiado larga (máximo 72 caracteres; los emojis y las tildes cuentan más)." });
     expect(mocks.findUnique).not.toHaveBeenCalled();
   });
 
