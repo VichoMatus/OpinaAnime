@@ -13,14 +13,14 @@ describe("PasswordInput", () => {
     expect(input.getAttribute("type")).toBe("password");
     expect(toggle.getAttribute("aria-controls")).toBe("password");
     fireEvent.click(toggle);
-    expect(screen.getByLabelText("Ocultar contraseña").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByLabelText("Ocultar contraseña").hasAttribute("aria-pressed")).toBe(false);
     expect(input.getAttribute("type")).toBe("text");
     const user = userEvent.setup();
     screen.getByRole("button", { name: "Ocultar contraseña" }).focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "Mostrar contraseña" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "Mostrar contraseña" }).hasAttribute("aria-pressed")).toBe(false);
     await user.keyboard(" ");
-    expect(screen.getByRole("button", { name: "Ocultar contraseña" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Ocultar contraseña" }).hasAttribute("aria-pressed")).toBe(false);
   });
 
   it("el botón no envía el formulario", () => {

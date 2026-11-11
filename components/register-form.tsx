@@ -25,21 +25,25 @@ export default function RegisterForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-      const result = await response.json();
       if (!response.ok) {
+        const result = await response.json();
         setError(result.error ?? "No se pudo crear la cuenta.");
         (form.elements.namedItem("password") as HTMLInputElement).value = "";
         setBusy(false);
         return;
       }
 
-      const signInResult = await signIn("credentials", { email, password, redirect: false });
-      if (signInResult?.error) {
+      try {
+        const signInResult = await signIn("credentials", { email, password, redirect: false });
+        if (signInResult?.error) {
+          router.push("/login?registered=1");
+          return;
+        }
+        router.push("/");
+        router.refresh();
+      } catch {
         router.push("/login?registered=1");
-        return;
       }
-      router.push("/");
-      router.refresh();
     } catch {
       setError("No se pudo crear la cuenta. Inténtalo de nuevo.");
       (form.elements.namedItem("password") as HTMLInputElement).value = "";
@@ -51,17 +55,17 @@ export default function RegisterForm() {
     <form method="POST" onSubmit={submit} className="form-stack">
       <div className="form-field">
         <label className="form-label" htmlFor="register-name">Nombre</label>
-        <input id="register-name" name="name" autoComplete="name" placeholder="Tu nombre (opcional)" className="field" />
+        <input id="register-name" name="name" autoComplete="name" maxLength={60} placeholder="Tu nombre (opcional)" className="field" />
       </div>
       <div className="form-field">
         <label className="form-label" htmlFor="register-email">Correo electrónico</label>
-        <input required id="register-email" name="email" type="email" autoComplete="email" placeholder="correo@ejemplo.com" className="field" />
+        <input required id="register-email" name="email" type="email" autoComplete="email" maxLength={254} aria-invalid={Boolean(error)} aria-describedby={error ? "register-form-error" : undefined} placeholder="correo@ejemplo.com" className="field" />
       </div>
       <div className="form-field">
         <label className="form-label" htmlFor="register-password">Contraseña</label>
-        <PasswordInput required minLength={8} id="register-password" name="password" autoComplete="new-password" placeholder="Contraseña (mínimo 8 caracteres)" />
+        <PasswordInput required minLength={8} maxLength={72} id="register-password" name="password" autoComplete="new-password" aria-invalid={Boolean(error)} aria-describedby={error ? "register-form-error" : undefined} placeholder="Contraseña (8–72 bytes)" />
       </div>
-      {error && <p role="alert" className="form-error">{error}</p>}
+      {error && <p id="register-form-error" role="alert" className="form-error">{error}</p>}
       <button type="submit" disabled={busy} className="btn btn-primary w-full">{busy ? "Creando cuenta..." : "Crear cuenta"}</button>
     </form>
   );

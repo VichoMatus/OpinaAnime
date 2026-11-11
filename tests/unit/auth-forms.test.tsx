@@ -51,10 +51,47 @@ describe("register-form", () => {
     fireEvent.submit(screen.getByRole("button", { name: "Crear cuenta" }).closest("form")!);
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login?registered=1"));
   });
+
+  it("redirige a login si signIn lanza después de crear la cuenta", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ id: "1" }) } as Response);
+    mocks.signIn.mockRejectedValue(new Error("network failure"));
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "nami@example.com" } });
+    fireEvent.change(document.querySelector('input[name="password"]')!, { target: { value: "password-123" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Crear cuenta" }).closest("form")!);
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login?registered=1"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("asocia errores de registro con los campos de email y contraseña", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false, json: async () => ({ error: "Correo inválido." }) } as Response);
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "nami@example.com" } });
+    fireEvent.change(document.querySelector('input[name="password"]')!, { target: { value: "password-123" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Crear cuenta" }).closest("form")!);
+    const error = await screen.findByRole("alert");
+    for (const input of [screen.getByLabelText("Correo electrónico"), document.querySelector('input[name="password"]')!]) {
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(input.getAttribute("aria-describedby")).toBe(error.id);
+    }
+  });
 });
 
 it("login muestra el aviso registered=1", () => {
   mocks.registered = "1";
   render(<LoginForm />);
   expect(screen.getByRole("status").textContent).toBe("Cuenta creada, inicia sesión.");
+});
+
+it("asocia errores de login con los campos de email y contraseña", async () => {
+  mocks.signIn.mockResolvedValue({ error: "CredentialsSignin" });
+  render(<LoginForm />);
+  fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "nami@example.com" } });
+  fireEvent.change(document.querySelector('input[name="password"]')!, { target: { value: "wrong-password" } });
+  fireEvent.submit(screen.getByRole("button", { name: "Iniciar sesión" }).closest("form")!);
+  const error = await screen.findByRole("alert");
+  for (const input of [screen.getByLabelText("Correo electrónico"), document.querySelector('input[name="password"]')!]) {
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe(error.id);
+  }
 });

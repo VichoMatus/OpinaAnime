@@ -11,13 +11,12 @@ export default function PasswordInput({ id, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <span className="password-field relative block">
+    <span className="password-field">
       <input {...props} id={inputId} type={visible ? "text" : "password"} className="field" />
       <button
         type="button"
-        className="password-toggle absolute inset-y-0 right-0 z-10 px-3 focus-visible:outline focus-visible:outline-2"
+        className="password-toggle"
         aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        aria-pressed={visible}
         aria-controls={inputId}
         onClick={() => setVisible((current) => !current)}
       >

@@ -33,13 +33,13 @@ export default function LoginForm() {
       {params.get("registered") && <p role="status" className="form-notice">Cuenta creada, inicia sesión.</p>}
       <div className="form-field">
         <label className="form-label" htmlFor="login-email">Correo electrónico</label>
-        <input required id="login-email" name="email" type="email" autoComplete="email" placeholder="correo@ejemplo.com" className="field" />
+        <input required id="login-email" name="email" type="email" autoComplete="email" aria-invalid={Boolean(error)} aria-describedby={error ? "login-form-error" : undefined} placeholder="correo@ejemplo.com" className="field" />
       </div>
       <div className="form-field">
         <label className="form-label" htmlFor="login-password">Contraseña</label>
-        <PasswordInput required id="login-password" name="password" autoComplete="current-password" placeholder="Contraseña" />
+        <PasswordInput required id="login-password" name="password" autoComplete="current-password" aria-invalid={Boolean(error)} aria-describedby={error ? "login-form-error" : undefined} placeholder="Contraseña" />
       </div>
-      {error && <p role="alert" className="form-error">{error}</p>}
+      {error && <p id="login-form-error" role="alert" className="form-error">{error}</p>}
       <button type="submit" disabled={busy} className="btn btn-primary w-full">{busy ? "Entrando..." : "Iniciar sesión"}</button>
     </form>
   );

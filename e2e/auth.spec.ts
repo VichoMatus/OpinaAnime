@@ -13,9 +13,9 @@ test("registro crea sesión, logout y login permiten ver contraseña", async ({ 
   await page.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(page).toHaveURL("/", { timeout: 30_000 });
   await expect(page.getByText(name)).toBeAttached();
-  await expect(page.getByRole("button", { name: "Salir" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /cerrar sesión/i })).toBeVisible();
 
-  await page.getByRole("button", { name: "Salir" }).click();
+  await page.getByRole("button", { name: /cerrar sesión/i }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.waitForLoadState("networkidle");
   const loginPassword = page.locator('input[name="password"]');
@@ -28,7 +28,7 @@ test("registro crea sesión, logout y login permiten ver contraseña", async ({ 
   await loginPassword.fill(password);
   await loginPassword.press("Enter");
   await expect(page).toHaveURL("/", { timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Salir" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /cerrar sesión/i })).toBeVisible();
 });
 
 test("registro duplicado muestra error y no crea sesión", async ({ page }) => {
@@ -38,7 +38,7 @@ test("registro duplicado muestra error y no crea sesión", async ({ page }) => {
   await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(page).toHaveURL("/");
-  await page.getByRole("button", { name: "Salir" }).click();
+  await page.getByRole("button", { name: /cerrar sesión/i }).click();
   await expect(page).toHaveURL(/\/login$/);
 
   await page.goto("/registro");
