@@ -1,5 +1,15 @@
 import React from "react";
 
+export function EyeIcon({ className = "h-5 w-5", crossed = false }: { className?: string; crossed?: boolean }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      {crossed && <path d="m3 3 18 18" />}
+    </svg>
+  );
+}
+
 export function TrashIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
