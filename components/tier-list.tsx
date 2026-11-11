@@ -8,8 +8,9 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
+import { Tier, TIER_CONFIGS } from "@/lib/tier-styles";
 
-export type Tier = "S" | "A" | "B" | "C" | "D" | "E";
+export type { Tier };
 
 export interface TierRecommendation {
   id: string;
@@ -34,21 +35,6 @@ interface TierListProps {
   onUpdateTier?: (id: string, newTier: Tier | null) => void;
   onReorder?: (updatedList: TierRecommendation[]) => void;
 }
-
-interface TierConfig {
-  name: Tier;
-  subtitle: string;
-  badgeStyle: React.CSSProperties;
-}
-
-const TIER_CONFIGS: TierConfig[] = [
-  { name: "S", subtitle: "Obra maestra", badgeStyle: { backgroundColor: "var(--tier-s)", color: "var(--tier-fg)" } },
-  { name: "A", subtitle: "Excelente", badgeStyle: { backgroundColor: "var(--tier-a)", color: "var(--tier-fg)" } },
-  { name: "B", subtitle: "Muy bueno", badgeStyle: { backgroundColor: "var(--tier-b)", color: "var(--tier-fg)" } },
-  { name: "C", subtitle: "Entretenido", badgeStyle: { backgroundColor: "var(--tier-c)", color: "var(--tier-fg)" } },
-  { name: "D", subtitle: "Regular", badgeStyle: { backgroundColor: "var(--tier-d)", color: "var(--tier-fg)" } },
-  { name: "E", subtitle: "Flojo", badgeStyle: { backgroundColor: "var(--tier-e)", color: "var(--tier-fg)" } },
-];
 
 export default function TierList({
   recommendations,
@@ -312,7 +298,7 @@ export default function TierList({
                           alt={item.title}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2 pt-5 opacity-95 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-overlay-strong via-overlay to-transparent p-2 pt-5 opacity-95 group-hover:opacity-100 transition-opacity">
                           <span className="block text-[11px] text-tier-fg font-semibold line-clamp-2 leading-tight">
                             {item.title}
                           </span>
@@ -416,7 +402,7 @@ export default function TierList({
                               />
                               <Link
                                 href={`/anime/${item.id}`}
-                                className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
+                                className="absolute inset-0 bg-overlay-strong opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
                                 onClick={(e) => {
                                   if (dragSnapshot.isDragging) e.preventDefault();
                                 }}
@@ -504,7 +490,7 @@ export default function TierList({
                           />
                           <Link
                             href={`/anime/${item.id}`}
-                            className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
+                            className="absolute inset-0 bg-overlay-strong opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-center"
                             onClick={(e) => {
                               if (dragSnapshot.isDragging) e.preventDefault();
                             }}

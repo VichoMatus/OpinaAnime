@@ -43,6 +43,10 @@
   --tier-e: #0F766E;
   --tier-fg: #FFFFFF;
 
+  /* Overlays oscuros sobre portadas de anime (con texto --tier-fg) */
+  --overlay: rgb(18 17 16 / 0.65);
+  --overlay-strong: rgb(18 17 16 / 0.90);
+
   --shadow-sm: 0 1px 3px 0 rgb(28 25 23 / 0.06), 0 1px 2px -1px rgb(28 25 23 / 0.04);
   --shadow-md: 0 4px 12px -2px rgb(28 25 23 / 0.08), 0 2px 6px -2px rgb(28 25 23 / 0.04);
   --shadow-lg: 0 12px 28px -6px rgb(28 25 23 / 0.12), 0 4px 10px -4px rgb(28 25 23 / 0.06);
@@ -199,6 +203,9 @@
   --color-tier-e: var(--tier-e);
   --color-tier-fg: var(--tier-fg);
 
+  --color-overlay: var(--overlay);
+  --color-overlay-strong: var(--overlay-strong);
+
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
@@ -225,8 +232,9 @@ body {
   overflow-x: hidden;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
+  word-spacing: 0.1em;
 }
 
 button,

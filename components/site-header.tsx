@@ -40,18 +40,18 @@ export default function SiteHeader({ user, showBackToForum = false }: SiteHeader
 
       if (res.ok) {
         setSyncMessage({
-          text: data.message || `Catálogo sincronizado (${data.totalInCatalog} animes).`,
+          text: data.message || `Catálogo actualizado (${data.totalInCatalog} animes).`,
           type: "success",
         });
       } else {
         setSyncMessage({
-          text: data.error || "No se pudo sincronizar el catálogo.",
+          text: data.error || "No se pudo actualizar el catálogo.",
           type: "error",
         });
       }
     } catch {
       setSyncMessage({
-        text: "Error de conexión al sincronizar el catálogo.",
+        text: "Error de conexión al actualizar el catálogo.",
         type: "error",
       });
     } finally {
@@ -95,7 +95,7 @@ export default function SiteHeader({ user, showBackToForum = false }: SiteHeader
           </Link>
         </div>
 
-        {/* Derecha: Usuario, badge ADMIN, sincronizar catálogo y salir */}
+        {/* Derecha: Usuario, badge ADMIN, actualizar catálogo y salir */}
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {isAdmin && (
             <button
@@ -103,11 +103,12 @@ export default function SiteHeader({ user, showBackToForum = false }: SiteHeader
               onClick={handleSyncCatalog}
               disabled={syncingCatalog}
               className="btn btn-secondary min-h-9 px-3 py-1.5 text-xs sm:text-sm"
-              title="Sincronizar catálogo con Kitsu API"
+              title="Actualizar catálogo de animes"
+              aria-label="Actualizar catálogo de animes"
             >
               <span aria-hidden="true">🔄</span>
               <span className="hidden md:inline">
-                {syncingCatalog ? "Sincronizando..." : "Sincronizar catálogo"}
+                {syncingCatalog ? "Actualizando..." : "Actualizar catálogo"}
               </span>
               <span className="md:hidden">
                 {syncingCatalog ? "..." : "Catálogo"}
